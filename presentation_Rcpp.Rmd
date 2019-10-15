@@ -1,24 +1,23 @@
 ---
-classoption: table, dvipsname, compress
-output: 
-  beamer_presentation:
-  # keep_tex: true
-  # toc: true
-  slide_level: 3
-includes:
-  in_header: header.tex
-  before_body: doc_prefix.tex
-  after_body: doc_suffix.tex
+classoption: table, dvipsname
 colorlinks: no
 fontsize: 10pt
 link-citations: yes
 linkcolor: Black
+output:
+  beamer_presentation:
+    includes:
+      after_body: doc_suffix.tex
+      before_body: doc_prefix.tex
+      in_header: header.tex
+    slide_level: 3
+urlcolor: Maroon
 ---
-  
-```{r options, echo=FALSE}
+
+```{r options, include=FALSE}
 library(knitr)
 library(kableExtra)
-opts_chunk$set(echo=FALSE, cache=FALSE,
+opts_chunk$set(echo=TRUE, cache=TRUE,
                #results="hide", 
                warning=FALSE,
                message=FALSE, highlight=TRUE,
@@ -28,24 +27,33 @@ opts_chunk$set(echo=FALSE, cache=FALSE,
 options(knitr.kable.NA="-")
 ```
 
+\frametitle{Outline}
+  \begin{columns}[c]
+    \begin{column}{0.9\textwidth}
+      \tableofcontents[sections=1]
+      \vspace{0.5cm}
+      \tableofcontents[sections=2]
+    \end{column}
+  \end{columns}
+
 <!-- ================================================================= -->
 <!-- PART 1: Rcpp* packages -->
 <!-- ================================================================= -->
-  
-  # Short presentation of Rcpp* packages
-  
-  ## Rcpp: extending R with C++
-  
-  ### Rcpp R package
-  
-  - **Rcpp** is an R package to extend R with C++ code
+
+# Short presentation of Rcpp* packages
+
+## Rcpp: extending R with C++
+
+### Rcpp R package
+
+- **Rcpp** is an R package to extend R with C++ code
 - Main advantage: C++ is fast, it accelerates R (see next sections)
 - Written by **Dirk EDDELBUETTEL** and **Romain FRANCOIS**
-  - <http://www.rcpp.org/>
-  
-  ### Simple Rcpp example
-  
-  **C++ code** (in file `Code/addition.cpp`)
+- <http://www.rcpp.org/>
+
+### Simple Rcpp example
+
+**C++ code** (in file `Code/addition.cpp`)
 ```{Rcpp Rcpp-addition, eval=FALSE}
 #include <Rcpp.h>
 using namespace Rcpp;
@@ -56,7 +64,7 @@ int addition(int a, int b) {
 ```
 
 **R code**
-  ```{r addition-r}
+```{r addition-r}
 Rcpp::sourceCpp("Code/addition.cpp")
 addition(2, 2)
 ```
@@ -64,15 +72,15 @@ addition(2, 2)
 ### Rcpp advantages
 
 **Thanks to `Rcpp::sourceCpp()`**
-  
-  - Compile the C++ code
+
+- Compile the C++ code
 - Export the function to the R session
 - Direct interchange of R objects (including S3, S4) between R and C++
-  - ... (many more, see `vignette("Rcpp-package")`)
+- ... (many more, see `vignette("Rcpp-package")`)
 
 **In an R package**
-  
-  - `Rcpp.package.skeleton()` to generate a new Rcpp package (modifying `DESCRIPTION` and `NAMESPACE`)
+
+- `Rcpp.package.skeleton()` to generate a new Rcpp package (modifying `DESCRIPTION` and `NAMESPACE`)
 - `Rcpp::compileAttributes()` scans the C++ files for `Rcpp::export` attributes and generates the code required to make the functions available in R.
 
 ## RcppGSL for fast random draws
@@ -86,22 +94,22 @@ addition(2, 2)
 \bcol{0.9\textwidth}
 
 **GNU Scientific Library**
-  
-  - Numerical library for C and C++ programmers
+
+- Numerical library for C and C++ programmers
 - Reliable random number generator algorithms
 - Thoroughly tested and fast random number distributions
 - Linear algebra (matrices and vectors)
 - <https://www.gnu.org/software/gsl/>
-  
-  \vspace{0.5cm}
+
+\vspace{0.5cm}
 
 **RcppGSL**
-  
-  - Interface between R and GSL
+
+- Interface between R and GSL
 - Using Rcpp to interface R and C
 - <http://dirk.eddelbuettel.com/code/rcpp.gsl.html>
-  
-  \ecol
+
+\ecol
 \ecols
 
 ### GSL random number distributions

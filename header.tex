@@ -25,7 +25,8 @@
 %% Natbib is a popular style for formatting references.
 %\usepackage{natbib} %doesn't work with beamer
 
-\title[The fate of tropical forests]{\textbf{The fate of tropical forests:}\\High resolution global maps of deforestation risk and future forest cover}
+\title[Rcpp* for MCMC in R]{\textbf{Using Rcpp* packages for easy and fast extension of R with C++}}
+%\subtitle{} 
 %\subtitle{} 
 %\author{G. Vieilledent}
 %\institute{JRC, CIRAD}
@@ -55,33 +56,40 @@
 \newif\ifplacelogo % create a new conditional
 \logo{
   \ifplacelogo
-  \includegraphics[height=0.75cm]{figs/Logo-JRC.jpg}\hspace{0.25cm}
-  \includegraphics[height=0.75cm]{figs/Logo-Cirad.png}
+    \begin{tabular}{C{2cm}C{2cm}C{5cm}}
+      \includegraphics[height=0.7cm]{figs/logo_Cirad.png} &
+      \includegraphics[height=1cm]{figs/logo_AMAP.png} 
+      \includegraphics[height=0.8cm]{figs/AMAP-titre-long.png} &
+      ~
+    \end{tabular}
   \fi
 } % replace with your own command
 
 %Call table of contents at the beginning of each section
-\AtBeginSection[]{
-\placelogotrue
-  \begin{frame}
-    \framesubtitle{Plan}
-    \begin{columns}[c]
-      \begin{column}{0.5\textwidth}
-        \tableofcontents[sections={1-2},currentsection]
-      \end{column}
-      \begin{column}{0.5\textwidth}
-        \tableofcontents[sections={3-5},currentsection]
-      \end{column}
-    \end{columns}
-  \end{frame}
-\placelogofalse
-}
+\AtBeginSection[]{}
+% \AtBeginSection[]{
+% \placelogotrue
+%   \begin{frame}
+%     \frametitle{Outline}
+%     \begin{columns}[c]
+%       \begin{column}{0.5\textwidth}
+%         \tableofcontents[sections=1, currentsection]
+%         \vspace{0.5cm}
+%         \tableofcontents[sections=2, currentsection]
+%       \end{column}
+%       \begin{column}{0.5\textwidth}
+%         \tableofcontents[sections=3, currentsection]
+%       \end{column}
+%     \end{columns}
+%   \end{frame}
+% \placelogofalse
+% }
 
 \AtBeginSubsection[]{}
-
 % \AtBeginSubsection[]{
+% \placelogotrue
 %   \begin{frame}
-%     \framesubtitle{Plan}
+%     \frametitle{Plan}
 %     \begin{columns}[c]
 %       \begin{column}{0.5\textwidth}
 %         \tableofcontents[sections={1-2},currentsection,currentsubsection]
@@ -91,6 +99,7 @@
 %       \end{column}
 %     \end{columns}
 %   \end{frame}
+% \placelogofalse
 % }
 
 % Two-columns slides
@@ -98,3 +107,13 @@
 \def\bcol{\begin{column}}
 \def\ecol{\end{column}}
 \def\ecols{\end{columns}}
+
+% Change fontsize of R code
+\let\oldShaded\Shaded
+\let\endoldShaded\endShaded
+\renewenvironment{Shaded}{\footnotesize\oldShaded}{\endoldShaded}
+
+% Change fontsize of output
+\let\oldverbatim\verbatim
+\let\endoldverbatim\endverbatim
+\renewenvironment{verbatim}{\footnotesize\oldverbatim}{\endoldverbatim}

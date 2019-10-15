@@ -1,0 +1,60 @@
+% Title page
+{
+  \setbeamertemplate{navigation symbols}{}
+
+  % % Title page
+  \begin{frame}[plain, noframenumbering]
+    \begin{center}
+        \small{\textbf{ATBC 2019 -- Saturday, 3rd of August -- Antananarivo}}
+    \end{center}
+    \vspace{-0.5cm}
+    \titlepage % Presentation first page
+    \vspace{-2.5cm}
+    \begin{center}
+      \includegraphics[width=10cm]{figs/Banniere.png}
+    \end{center}
+    \begin{center}
+
+      %{\small
+        \begin{tabular}{c}
+          Ghislain Vieilledent$^{1,2}$, Christelle Vancutsem$^{1}$, and Frédéric Achard$^{1}$
+        \end{tabular}
+      %}
+
+      \vspace{0.25cm}
+
+      {\small
+        \begin{tabular}{c}
+          $[1]$ \textbf{JRC} D.1 Bio-economy unit,
+          $[2]$ \textbf{Cirad} UMR AMAP
+        \end{tabular}
+      }
+
+      \vspace{0.25cm}
+
+      \begin{tabular}{C{3cm}C{3cm}}
+        \includegraphics[height=0.75cm]{figs/Logo-JRC.jpg} &
+        \includegraphics[height=0.75cm]{figs/Logo-Cirad.png}\\
+      \end{tabular}
+
+    \end{center}
+    
+  \end{frame}
+}
+\setcounter{framenumber}{0}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\placelogotrue
+\begin{frame}
+  \framesubtitle{Outline}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      \tableofcontents[sections={1-2}]
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \tableofcontents[sections={3-5}]
+    \end{column}
+  \end{columns}
+\end{frame}
+\placelogofalse

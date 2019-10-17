@@ -29,10 +29,10 @@ options(knitr.kable.NA="-")
 
 \frametitle{Outline}
   \begin{columns}[c]
-    \begin{column}{0.45\textwidth}
+    \begin{column}{0.5\textwidth}
       \tableofcontents[sections=1]
     \end{column}
-      \begin{column}{0.45\textwidth}
+      \begin{column}{0.5\textwidth}
       \tableofcontents[sections=2]
       \vspace{0.5cm}
       \tableofcontents[sections=3]
@@ -137,7 +137,7 @@ addition(2, 2)
 ### RcppGSL example
 
 **C++ code**
-```{Rcpp RcppGSL-my_rnorm, eval=F}
+```{Rcpp RcppGSL-my_rnorm}
 #include <Rcpp.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
@@ -158,7 +158,7 @@ Rcpp::NumericVector my_rnorm(int nsamp, double mu,
 ### RcppGSL example
 \vspace{0.3cm}
 **R code**
-```{r r-my_rnorm, fig.show="asis", out.width="70%", eval=F}
+```{r r-my_rnorm, fig.show="asis", out.width="70%"}
 library(Rcpp)
 library(RcppGSL)
 beta <- my_rnorm(100, 5, 2)
@@ -296,46 +296,157 @@ R_distmat <- function(X){
 }
 ```
 
-**Comparison**
+### Distance computation 
+\vspace{0.5cm}
+\bcols
+\bcol{0.5\textwidth}
+**1000 points dispersed all over the space : **
+\vspace{0.2cm}
+```{r points-representation, echo=F,  fig.show="asis", out.width="100%",out.height="70%"}
+# Spatial representation of points  
+X <- matrix(runif(2000,0,100),ncol=2)
+plot(X[,1],X[,2],pch=4,xlab="x", ylab="y", main="Spatial repartition of points", cex.main=1.5)
+```
+\ecol
+\bcol{0.5\textwidth}
+**Distance matrix for 6 points : **
+\vspace{0.1cm}
+```{r distance-matrix, echo=F}
+distmat <- arma_distmat(X)
+knitr::kable(distmat[1:6,1:6], digits=1, booktabs=TRUE) %>%
+		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
+		                          full_width=FALSE, font_size=8)
+```
+\vspace{3cm}
+\ecol
+\ecols 
+
+### Distance computation 
+**Comparison of compilation times**
 ```{r dist-benchmark}
 Rcpp::sourceCpp("Code/arma_distmat.cpp")
 library(rdist)
-
-# Spatial representation of points  
-X <- matrix(rnorm(10000),ncol=2)
-
 # Benchmark
 library(rbenchmark)
 Benchmark <- benchmark(
   "arma_distmat" = {arma_distmat(X)},
-  "R_distmat" = {R_distmat(X)}
   "cdist" = {cdist(X,X)},
-  replications=10,
+  "R_distmat" = {R_distmat(X)},
+  replications=30,
   columns = c("test", "elapsed", "relative"))
-knitr::kable(Benchmark, booktabs=TRUE) %>%
+knitr::kable(Benchmark,digits=1, booktabs=TRUE) %>%
 		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
 		                          full_width=FALSE)
 ```
 
 ## Simple linear regression 
+
 ### Simple linear regression 
 
+**C++ code**
+```{Rcpp fastLm}
+#include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::export]]
+Rcpp::List arma_fastLm(const arma::mat& X, const arma::colvec& y) {
+    int n = X.n_rows, k = X.n_cols;
+        
+    arma::colvec coef = arma::solve(X, y);    // fit model y ~ X
+    arma::colvec res  = y - X*coef;           // residuals
+    // std.errors of coefficients
+    double s2 = arma::sum(res.t()*res);
+    arma::colvec std_err = arma::sqrt(s2 * 
+      arma::diagvec(arma::pinv(arma::trans(X)*X)));
+    return Rcpp::List::create(Rcpp::Named("coefficients") = coef,
+                        Rcpp::Named("stderr") = std_err,
+                        Rcpp::Named("residuals")  = res,
+                        Rcpp::Named("df.residual")  = n - k);
+}
+```
 
-# Exercise to do yourself 
+### Simple linear regression 
+**R code**
+```{r r-fastLm}
+R_fastLm <- function(X, y) {
+n <- nrow(X)
+k <- ncol(X)
 
-### 
+# fit model y ~ X       
+coef <-solve(t(X) %*% X) %*% t(X) %*% y
+# residuals
+res <- y - X %*% coef
+# std.errors of coefficients
+s2 = sum(t(res) %*% res)/(n - k);
+std_err = sqrt(s2 %*% diag(solve(t(X)%*%X)))
+return(list("coefficients" = coef,
+            "stderr" = std_err,
+            "residuals" = res,
+            "df.residual" = n - k))
+}
+```
 
-# Build of R packages using Rcpp
+### Simple linear regression 
+**Comparison of compilation times**
+```{r lin-benchmark}
+# Data simulation
+X <- matrix(rnorm(500000),ncol=100)
+y <- rnorm(5000)
+# Call C++ function
+Rcpp::sourceCpp("Code/arma_fastLm.cpp")
+# Benchmark
+library(rbenchmark)
+Benchmark <- benchmark(
+  "arma_fastLm" = {arma_fastLm(X,y)},
+  "R_fastLm" = {R_fastLm(X,y)},
+  replications=30,
+  columns = c("test", "elapsed", "relative"))
+knitr::kable(Benchmark,digits=1, booktabs=TRUE) %>%
+		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
+		                          full_width=FALSE, font_size=8)
+```
+
+### Representation of results 
+
+## Exercise to do yourself 
+
+### Exercise to do yourself
+
+Implement a function in C++ to select in a matrix the lines identified by a vector of integer and return the corresponding matrix.
+\vspace{0.2cm}
+
+**C++ code**
+```{Rcpp}
+#include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::export]]
+arma::mat mat_select_lines(arma::mat& X, arma::uvec& rowId) {
+  int nrows = rowId.n_elem;
+  int ncols = X.n_cols;
+  arma::mat R(nrows, ncols);
+  for(int i = 0; i < nrows; i++) {
+    for(int j = 0; j < ncols; j++) {
+      R(i, j) = X(rowId(i), j);
+    }
+  }
+  return R;
+}
+```
+
+
+# Build of R package using Rcpp
 
 ## Usefull functions
 
-### Functions to build an R package
+### How to build an R package around C++ functions 
 
 - `Rcpp.package.skeleton()` to generate a new Rcpp package (modifying `DESCRIPTION` and `NAMESPACE`)
   
 - `Rcpp::compileAttributes()` scans the C++ files and generates the `RcppExports.cpp` file to make the functions preceded by `// [[Rcpp::export]]` available in R.
 
-## Example of package built with Rcpp
+- Implement R functions that checks the conformity of user-defined parameters, calls functions in C++ and returns the results in an easy-to-use format.
+
+
+## Example of package using Rcpp
 
 ### jSDM R package
 \vspace{0.2cm}

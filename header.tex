@@ -8,7 +8,8 @@
 %\usepackage{fancyvrb} %give size to verbatim
 %\usepackage{hyperref}
 \usepackage[english,francais]{babel}
-\definecolor{vertmoyen}{RGB}{51,100,23} % vert moyen
+\definecolor{vertmoyen}{RGB}{51,110,23} % vert moyen
+\definecolor{vertclair}{RGB}{51,150,23} % vert moyen
 \usecolortheme[named=vertmoyen]{structure}
 
 \usepackage{tabularx} % varier la largeur du tableau
@@ -40,13 +41,20 @@
 % \usetheme{Frankfurt}
 % \usetheme{Berlin}
 % \usetheme{Madrid}
- \usetheme{Montpellier}
+% \usetheme{Montpellier}
 % \usetheme{Singapore}
 % \usetheme{Antibes}
 \useinnertheme{rounded} %% bullets
 \useoutertheme[subsection=false]{miniframes}
 %\useoutertheme[subsection=false,footline=authorinstitutetitle]{miniframes}
 \setbeamertemplate{footline}[frame number]
+\setbeamercolor{section in head/foot}{bg=vertmoyen}
+\setbeamercolor{section in head/foot}{fg=white}
+\setbeamerfont{section in head/foot}{size=\footnotesize	}
+\setbeamercolor{frametitle}{bg=vertclair}
+\setbeamercolor{frametitle}{fg=white}
+\setbeamercolor{title}{bg=vertmoyen}
+\setbeamercolor{title}{fg=white}
 
 % Ignore ignorenonframetext class option in default template
 \makeatletter

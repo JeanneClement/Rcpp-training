@@ -29,10 +29,15 @@ options(knitr.kable.NA="-")
 
 \frametitle{Outline}
   \begin{columns}[c]
-    \begin{column}{0.9\textwidth}
+    \begin{column}{0.45\textwidth}
       \tableofcontents[sections=1]
-      \vspace{0.5cm}
+    \end{column}
+      \begin{column}{0.45\textwidth}
       \tableofcontents[sections=2]
+      \vspace{0.5cm}
+      \tableofcontents[sections=3]
+      \vspace{0.5cm}
+      \tableofcontents[sections=4]
     \end{column}
   \end{columns}
 
@@ -42,13 +47,16 @@ options(knitr.kable.NA="-")
 
 # Short presentation of Rcpp* packages
 
-## Rcpp: extending R with C++
+## Rcpp : extending R with C++
 
 ### Rcpp R package
 
 - **Rcpp** is an R package to extend R with C++ code
+
 - Main advantage: C++ is fast, it accelerates R (see next sections)
+
 - Written by **Dirk EDDELBUETTEL** and **Romain FRANCOIS**
+
 - <http://www.rcpp.org/>
 
 ### Simple Rcpp example
@@ -74,14 +82,12 @@ addition(2, 2)
 **Thanks to `Rcpp::sourceCpp()`**
 
 - Compile the C++ code
+
 - Export the function to the R session
+
 - Direct interchange of R objects (including S3, S4) between R and C++
+
 - ... (many more, see `vignette("Rcpp-package")`)
-
-**In an R package**
-
-- `Rcpp.package.skeleton()` to generate a new Rcpp package (modifying `DESCRIPTION` and `NAMESPACE`)
-- `Rcpp::compileAttributes()` scans the C++ files for `Rcpp::export` attributes and generates the code required to make the functions available in R.
 
 ## RcppGSL for fast random draws
 
@@ -96,9 +102,13 @@ addition(2, 2)
 **GNU Scientific Library**
 
 - Numerical library for C and C++ programmers
+
 - Reliable random number generator algorithms
+
 - Thoroughly tested and fast random number distributions
+
 - Linear algebra (matrices and vectors)
+
 - <https://www.gnu.org/software/gsl/>
 
 \vspace{0.5cm}
@@ -106,7 +116,9 @@ addition(2, 2)
 **RcppGSL**
 
 - Interface between R and GSL
+
 - Using Rcpp to interface R and C
+
 - <http://dirk.eddelbuettel.com/code/rcpp.gsl.html>
 
 \ecol
@@ -115,14 +127,17 @@ addition(2, 2)
 ### GSL random number distributions
 
 - GSL v2.6 includes **38 random number distributions** (see [GNU GSL](https://www.gnu.org/software/gsl/doc/html/randist.html))
+
 - It's easy to implement additional random number distributions from the GSL base distributions (e.g. truncated normal distribution)
+
 - For comparison, R API includes "only" 24 random number distributions (see [Writing R Extensions](https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Distribution-functions))
+
 - Random draws are faster with GSL than with R (eg. `gsl_ran_gamma()` vs. `R::rgamma()`)
 
 ### RcppGSL example
 
 **C++ code**
-```{Rcpp RcppGSL-my_rnorm}
+```{Rcpp RcppGSL-my_rnorm, eval=F}
 #include <Rcpp.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
@@ -141,9 +156,9 @@ Rcpp::NumericVector my_rnorm(int nsamp, double mu,
 ```
 
 ### RcppGSL example
-
+\vspace{0.3cm}
 **R code**
-```{r r-my_rnorm, fig.show="asis", out.width="70%"}
+```{r r-my_rnorm, fig.show="asis", out.width="70%", eval=F}
 library(Rcpp)
 library(RcppGSL)
 beta <- my_rnorm(100, 5, 2)
@@ -164,9 +179,13 @@ hist(beta)
 **Armadillo**
 
 - C++ library for linear algebra and scientific computing
+
 - Provides high-level syntax and functionality: speed and ease of use
+
 - Classes for vectors, matrices and cubes
+
 - Matrix operations, matrix decomposition, linear model solver, etc.
+
 - <http://arma.sourceforge.net/>
 
 \vspace{0.5cm}
@@ -174,7 +193,9 @@ hist(beta)
 **RcppArmadillo**
 
 - Interface between R and Armadillo
+
 - Using Rcpp to interface R and C++
+
 - <http://dirk.eddelbuettel.com/code/rcpp.armadillo.html>
 
 \ecol
@@ -223,3 +244,106 @@ mod$coef
 
 - Licenses: GNU General Public License, Apache License 2.0 for Armadillo
 - Free software licenses: we can use, modify and redistribute these softwares
+
+# Application examples
+
+## Distance computation 
+
+### Distance computation 
+
+**C++ code** (in file `Code/arma_distmat.cpp`)
+```{Rcpp arma_distmat}
+#include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
+using namespace Rcpp;
+using namespace arma;
+
+// [[Rcpp::export]]
+arma::mat arma_distmat(const arma::mat& x) { 
+  
+  int np = x.n_rows;
+  
+  arma::mat distmat; distmat.zeros(np, np);
+  for (int i = 0; i < np; i++) {
+    arma::vec p0 = x.row(i).t();
+    for (int j = i + 1; j < np; j++) {
+      arma::vec p1 = x.row(j).t();
+      arma::vec diff = p0 - p1;
+      double squared_diff = as_scalar(diff.t() * diff);
+      distmat(j, i) = distmat(i, j) = sqrt(squared_diff);
+    }
+  }
+  return distmat;
+}
+```
+
+### Distance computation 
+**R code**
+```{r R_distmat}
+R_distmat <- function(X){
+  np <- nrow(X)
+  distmat <- matrix(0,nrow=np,ncol=np)
+  for (i in 1:(np-1)) {
+    p0 <- X[i,]
+    for (j in (i+1):np){
+    p1 <- X[j,]
+    diff <- p0-p1
+    squared_diff <- t(diff)%*% diff
+    distmat[j,i] <- distmat[i,j] <- sqrt(squared_diff)
+    }
+  }
+ return(distmat)
+}
+```
+
+**Comparison**
+```{r dist-benchmark}
+Rcpp::sourceCpp("Code/arma_distmat.cpp")
+library(rdist)
+
+# Spatial representation of points  
+X <- matrix(rnorm(10000),ncol=2)
+
+# Benchmark
+library(rbenchmark)
+Benchmark <- benchmark(
+  "arma_distmat" = {arma_distmat(X)},
+  "R_distmat" = {R_distmat(X)}
+  "cdist" = {cdist(X,X)},
+  replications=10,
+  columns = c("test", "elapsed", "relative"))
+knitr::kable(Benchmark, booktabs=TRUE) %>%
+		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
+		                          full_width=FALSE)
+```
+
+## Simple linear regression 
+### Simple linear regression 
+
+
+# Exercise to do yourself 
+
+### 
+
+# Build of R packages using Rcpp
+
+## Usefull functions
+
+### Functions to build an R package
+
+- `Rcpp.package.skeleton()` to generate a new Rcpp package (modifying `DESCRIPTION` and `NAMESPACE`)
+  
+- `Rcpp::compileAttributes()` scans the C++ files and generates the `RcppExports.cpp` file to make the functions preceded by `// [[Rcpp::export]]` available in R.
+
+## Example of package built with Rcpp
+
+### jSDM R package
+\vspace{0.2cm}
+\begin{center}
+\includegraphics[width=0.9\textwidth, height = 0.65\textheight]{figs/jSDM-website.png}
+\end{center}
+\vspace{0.2cm}
+
+- <https://ecology.ghislainv.fr/jSDM>
+  
+- Made with Rcpp* packages

@@ -208,21 +208,15 @@ hist(beta)
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::export]]
-Rcpp::List fastLm(const arma::mat& X, const arma::colvec& y) {
+arma::mat arma_scale(const arma::mat& X) {
     int n = X.n_rows, k = X.n_cols;
-        
-    arma::colvec coef = arma::solve(X, y);    // fit model y ~ X
-    arma::colvec res  = y - X*coef;           // residuals
-    // std.errors of coefficients
-    double s2 = std::inner_product(res.begin(), 
-                                   res.end(), 
-                                   res.begin(), 0.0)/(n - k);
-                                                        
-    arma::colvec std_err = arma::sqrt(s2 * 
-      arma::diagvec(arma::pinv(arma::trans(X)*X)));
-    return Rcpp::List::create(Rcpp::Named("coefficients") = coef,
-                        Rcpp::Named("stderr")       = std_err,
-                        Rcpp::Named("df.residual")  = n - k);
+    arma::rowvec col_means = arma::mean(X,0); // means 
+    arma::rowvec col_sd  = arma::stddev(X,0); // standard deviations
+    arma::mat X_scaled(n,k);
+    for (int  p= 0; p < k; p++) {
+    X_scaled.col(p) = (X.col(p)-col_means(p))/col_sd(p);
+    }
+    return X_scaled;
 }
 ```
 
@@ -232,12 +226,12 @@ Rcpp::List fastLm(const arma::mat& X, const arma::colvec& y) {
 ```{r r-RcppArma-example}
 library(Rcpp)
 library(RcppArmadillo)
-# Trees data-set
-y <- log(trees$Volume)
-X <- cbind(1, log(trees$Girth))
-# fastLm
-mod <- fastLm(X, y)
-mod$coef
+
+# Center and reduce a matrix 
+X <- matrix(rnorm(50),ncol=5)
+X_scaled <- arma_scale(X)
+colMeans(X_scaled)
+var(X_scaled)
 ```
 
 ### Licenses
@@ -260,9 +254,7 @@ using namespace arma;
 
 // [[Rcpp::export]]
 arma::mat arma_distmat(const arma::mat& x) { 
-  
   int np = x.n_rows;
-  
   arma::mat distmat; distmat.zeros(np, np);
   for (int i = 0; i < np; i++) {
     arma::vec p0 = x.row(i).t();
@@ -334,9 +326,12 @@ Benchmark <- benchmark(
   "R_distmat" = {R_distmat(X)},
   replications=30,
   columns = c("test", "elapsed", "relative"))
+```
+
+```{r dist-benchmark-results, echo=F}
 knitr::kable(Benchmark,digits=1, booktabs=TRUE) %>%
 		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
-		                          full_width=FALSE)
+		                          full_width=FALSE, font_size = 8)
 ```
 
 ## Simple linear regression 
@@ -351,12 +346,11 @@ knitr::kable(Benchmark,digits=1, booktabs=TRUE) %>%
 Rcpp::List arma_fastLm(const arma::mat& X, const arma::colvec& y) {
     int n = X.n_rows, k = X.n_cols;
         
-    arma::colvec coef = arma::solve(X, y);    // fit model y ~ X
+    arma::colvec coef = arma::inv(X.t()*X)*X.t()*y;    // fit model y ~ X
     arma::colvec res  = y - X*coef;           // residuals
     // std.errors of coefficients
     double s2 = arma::sum(res.t()*res);
-    arma::colvec std_err = arma::sqrt(s2 * 
-      arma::diagvec(arma::pinv(arma::trans(X)*X)));
+    arma::colvec std_err = arma::sqrt(s2*arma::diagvec(arma::inv(X.t()*X)));
     return Rcpp::List::create(Rcpp::Named("coefficients") = coef,
                         Rcpp::Named("stderr") = std_err,
                         Rcpp::Named("residuals")  = res,
@@ -388,9 +382,10 @@ return(list("coefficients" = coef,
 ### Simple linear regression 
 **Comparison of compilation times**
 ```{r lin-benchmark}
-# Data simulation
-X <- matrix(rnorm(500000),ncol=100)
-y <- rnorm(5000)
+# airquality data-set
+library(datasets)
+y <- airquality$Ozone
+X <- cbind(1, airquality$Solar.R, airquality$Temp, airquality$Wind)
 # Call C++ function
 Rcpp::sourceCpp("Code/arma_fastLm.cpp")
 # Benchmark
@@ -398,9 +393,12 @@ library(rbenchmark)
 Benchmark <- benchmark(
   "arma_fastLm" = {arma_fastLm(X,y)},
   "R_fastLm" = {R_fastLm(X,y)},
-  replications=30,
+  replications=100,
   columns = c("test", "elapsed", "relative"))
-knitr::kable(Benchmark,digits=1, booktabs=TRUE) %>%
+```
+
+```{r lin-benchmark-results, echo=F}
+knitr::kable(Benchmark,digits=3, booktabs=TRUE) %>%
 		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
 		                          full_width=FALSE, font_size=8)
 ```

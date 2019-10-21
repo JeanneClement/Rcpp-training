@@ -206,9 +206,13 @@ We have observations of a response variable available for $n$ individuals $Y=(y_
 and $p$ explanatory variables $(X_1,\ldots,X_p)$ such as   $X_1=(X_{11},\ldots,X_{i1},\ldots,X_{n1})'$.  
 
 \vspace{1cm}
-We want to estimate $\beta=(\beta_0,\beta_1,\ldots,\beta_p)$ such as : 
+We want to estimate coefficients of the linear regression $\beta=(\beta_0,\beta_1,\ldots,\beta_p)$ such as : 
 $$ y_i = \beta_0 + \beta_1X_{i1}+\ldots+\beta_pX_{ip}+\epsilon_i,$$
-where $\epsilon_i \sim \mathcal{N}(0,\sigma^2)$ for $i=1,\ldots,n$.  
+where $\epsilon_i \sim \mathcal{N}(0,\sigma^2)$ for $i=1,\ldots,n$.   
+
+\vspace{0.2cm}
+Then $y_i \sim \mathcal{N}(\beta_0 + \beta_1X_{i1}+\ldots+\beta_pX_{ip}, \ \sigma^2)$.  
+
 \vspace{0.4cm}
 
 This gives in matrix writing :  
@@ -222,7 +226,7 @@ $$\widehat{\beta}=\left(X'X\right)^{-1}X'y.$$
 \vspace{0.2cm}
 We define the residuals  $$\widehat{\epsilon} = Y - X\widehat{\beta}=Y-\widehat{Y}.$$
 \vspace{0.2cm}
-Then residual variance is given by $$\widehat{\sigma^2}=\dfrac{\sum\limits_{i=1}^n \widehat{\epsilon_i}^2}{n-p}.$$  
+Then residual variance is given by $$\widehat{\sigma^2}=\dfrac{\sum\limits_{i=1}^n \widehat{\epsilon_i}^2}{n-p-1}.$$  
 \vspace{0.2cm}
 Finally the variance–covariance matrix of coefficients is estimated by $$V_{\widehat{\beta}}=\widehat{\sigma^2}\left(X'X\right)^{-1}.$$
 \vspace{1cm}
@@ -233,17 +237,19 @@ Finally the variance–covariance matrix of coefficients is estimated by $$V_{\w
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::export]]
 Rcpp::List arma_fastLm(const arma::mat& X, const arma::colvec& y) {
-    int n = X.n_rows, k = X.n_cols;
+    int n = X.n_rows;
+    int p = X.n_cols;
         
     arma::colvec coef = arma::inv(X.t()*X)*X.t()*y;    // fit model y ~ X
     arma::colvec res  = y - X*coef;           // residuals
     // std.errors of coefficients
-    double s2 = arma::sum(res.t()*res);
+    double s2 = arma::sum(res.t()*res)/(n-p);
     arma::colvec std_err = arma::sqrt(s2*arma::diagvec(arma::inv(X.t()*X)));
     return Rcpp::List::create(Rcpp::Named("coefficients") = coef,
                         Rcpp::Named("stderr") = std_err,
                         Rcpp::Named("residuals")  = res,
-                        Rcpp::Named("df.residual")  = n - k);
+                        Rcpp::Named("sigma2")  = s2,
+                        Rcpp::Named("df.residual")  = n - p);
 }
 ```
 
@@ -251,19 +257,20 @@ Rcpp::List arma_fastLm(const arma::mat& X, const arma::colvec& y) {
 ```{r r-fastLm}
 R_fastLm <- function(X, y) {
 n <- nrow(X)
-k <- ncol(X)
+p <- ncol(X)
 
 # fit model y ~ X       
 coef <-solve(t(X) %*% X) %*% t(X) %*% y
 # residuals
 res <- y - X %*% coef
 # std.errors of coefficients
-s2 = sum(t(res) %*% res)/(n - k);
+s2 = sum(t(res) %*% res)/(n - p);
 std_err = sqrt(s2 %*% diag(solve(t(X)%*%X)))
 return(list("coefficients" = coef,
             "stderr" = std_err,
             "residuals" = res,
-            "df.residual" = n - k))
+            "sigma2" = s2,
+            "df.residual" = n - p))
 }
 ```
 
@@ -309,6 +316,22 @@ abline(a=0,b=1, col="red")
 # Loglikelihood computation 
 
 ## Mathematical definition
+\vspace{0.2cm}
+The likelihood function expresses the plausibilities of different parameter values for a given sample of data.  
+The maximum of this function, if it exists, correspond to the combination of model parameter values that maximize the probability of drawing the sample actually obtained.  
+\vspace{0.2cm}
+The likelihood corresponding to the previous simple linear model is given by :
+$$\begin{aligned}
+L(\beta,\sigma^2) &= \mathbb{P}(y_i \ | \ \sigma, \beta) \\
+&=\prod \limits_{i=1}^n \frac{1}{\sigma \sqrt{2\pi}}\exp{\left(-\frac{1}{2\sigma^2}(y_i-\beta_0-X_{i1}\beta_1-\ldots-X_{ip}\beta_p)^2 \right)}
+\end{aligned}$$
+
+Then the log-likelihood is :
+$$\begin{aligned}
+l(\beta,\sigma^2) &= \log{\left(L(\beta,\sigma^2)\right)} \\
+&= \sum \limits_{i=1}^n \ \log \left(\frac{1}{\sigma \sqrt{2\pi}}\right) -\frac{1}{2\sigma^2}(y_i-\beta_0-X_{i1}\beta_1-\ldots-X_{ip}\beta_p)^2\\
+&= -n\log(\sigma)-n\frac{\log(2\pi)}{2} -\frac{1}{2\sigma^2} \sum \limits_{i=1}^n (y_i-\beta_0-X_{i1}\beta_1-\ldots-X_{ip}\beta_p)^2
+\end{aligned}$$
 
 Implement a function in C++ using RcppArmadillo to compute the log-likelihood corresponding to each of the following models fitted on the trees dataset used previously :  
 
@@ -318,15 +341,12 @@ Implement a function in C++ using RcppArmadillo to compute the log-likelihood co
 
 - Model 3 : $y_i = \beta_0 + \beta_1G_i + \beta_2H_i + \epsilon_i$
 
-The likelihood corresponding to a model is given by : $l(\theta) = \sum$
-Then the log-likelihood is : $\prod$
-
 ## C++ function 
 ```{Rcpp arma_logL}
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::export]]
-double arma_logL(arma::mat X, arma::vec y, arma::vec beta) {
+double arma_logL(arma::mat X, arma::vec y, arma::vec beta, double sigma2) {
   int n = y.n_elem;
   int p = X.n_cols;
   double logL = 0;
@@ -335,7 +355,7 @@ double arma_logL(arma::mat X, arma::vec y, arma::vec beta) {
     for(int j = 0; j < p; j++) {
       Xbeta_part += X(i,j)*beta(j);
     }
-    logL += R::dnorm(y[i], Xbeta_part, 1, 1);
+    logL += R::dnorm(y[i], Xbeta_part, std::sqrt(sigma2), 1);
   }
   return logL;
 }
@@ -343,16 +363,17 @@ double arma_logL(arma::mat X, arma::vec y, arma::vec beta) {
 
 ## R function 
 ```{r R_logL}
-R_logL <- function(X,y,beta) {
+R_logL <- function(X,y,beta,sigma2) {
   n <- length(y)
   p <- ncol(X)
+  
   logL <- 0
   for (i in 1:n) {
     Xbeta_part <- 0
     for(j in 1:p) {
       Xbeta_part <- Xbeta_part + X[i,j]*beta[j]
     }
-    logL <- logL + dnorm(x=y[i], mean=Xbeta_part, sd=1, log=T)
+    logL <- logL + dnorm(x=y[i], mean=Xbeta_part, sd=sqrt(sigma2), log=T)
   }
   return(logL)
 }
@@ -370,8 +391,8 @@ R_mod <- R_fastLm(X,y)
 Rcpp::sourceCpp("Code/arma_logL.cpp")
 # Benchmark
 Benchmark <- benchmark(
-  "arma_logL" = {arma_logL(X,y,arma_mod$coefficients)},
-  "R_logL" = {R_logL(X,y,R_mod$coefficients)},
+  "arma_logL" = {arma_logL(X,y,arma_mod$coefficients,arma_mod$sigma2)},
+  "R_logL" = {R_logL(X,y,R_mod$coefficients,R_mod$sigma2)},
   replications=100,
   columns = c("test", "elapsed", "relative"))
 ```
@@ -393,20 +414,20 @@ y <- log(trees$Volume)
 X1 <- cbind(1, log(trees$Girth))
 arma_mod1 <- arma_fastLm(X1,y)
 R_mod1 <- R_fastLm(X1,y)
-arma_logL1 <- arma_logL(X1,y,arma_mod$coefficients)
-R_logL1 <- R_logL(X1,y,R_mod$coefficients)
+arma_logL1 <- arma_logL(X1,y,arma_mod1$coefficients,arma_mod1$sigma2)
+R_logL1 <- R_logL(X1,y,R_mod1$coefficients, R_mod1$sigma2)
 ## model 2
 X2 <- cbind(1, log(trees$Height))
 arma_mod2 <- arma_fastLm(X2,y)
 R_mod2 <- R_fastLm(X2,y)
-arma_logL2 <- arma_logL(X2,y,arma_mod$coefficients)
-R_logL2 <- R_logL(X2,y,R_mod$coefficients)
+arma_logL2 <- arma_logL(X2,y,arma_mod2$coefficients,arma_mod2$sigma2)
+R_logL2 <- R_logL(X2,y,R_mod2$coefficients,R_mod2$sigma2)
 ## model 3
 X3 <- cbind(1, log(trees$Girth), log(trees$Height))
 arma_mod3 <- arma_fastLm(X3,y)
 R_mod3 <- R_fastLm(X3,y)
-arma_logL3 <- arma_logL(X3,y,arma_mod$coefficients)
-R_logL3 <- R_logL(X3,y,R_mod$coefficients)
+arma_logL3 <- arma_logL(X3,y,arma_mod3$coefficients,arma_mod3$sigma2)
+R_logL3 <- R_logL(X3,y,R_mod3$coefficients,R_mod3$sigma2)
 logL <- data.frame(arma_logL=c(arma_logL1,arma_logL2,arma_logL3), R_logL=c(R_logL1,R_logL2,R_logL3))
 rownames(logL) <- c("model 1","model 2","model 3")
 knitr::kable(logL,digits=3, booktabs=TRUE, row.names = T) %>%

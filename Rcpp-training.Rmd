@@ -1,0 +1,375 @@
+---
+title: "Rcpp training"
+output:
+  bookdown::html_document2:
+    #base_format: rmarkdown::html_vignette
+    #highlight: tango
+    number_sections: true
+    toc: true
+    #toc_float: true
+    fig_caption: yes
+link-citations: yes
+pkgdown:
+  as_is: true
+vignette: >
+ %\VignetteEngine{knitr::rmarkdown}
+ %\VignetteIndexEntry{Rcpp training}
+ %\VignetteEncoding{UTF-8}
+urlcolor: Maroon
+---
+
+```{r options, include=FALSE}
+library(knitr)
+library(kableExtra)
+library(pkgdown)
+library(dplyr)
+opts_chunk$set(echo=TRUE, cache=TRUE,
+               #results="hide", 
+               warning=FALSE,
+               message=FALSE, highlight=TRUE,
+               fig.show="hide", size="small",
+               fig.align="center",
+               tidy=FALSE)
+options(knitr.kable.NA="-")
+```
+
+# RcppGSL example
+
+## C++ code
+```{Rcpp RcppGSL-my_rnorm}
+#include <Rcpp.h>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
+using namespace Rcpp;
+// [[Rcpp::depends(RcppGSL)]]
+// [[Rcpp::export]]
+Rcpp::NumericVector my_rnorm(int nsamp, double mu,
+                             double sigma) {
+	gsl_rng *s = gsl_rng_alloc(gsl_rng_mt19937); // Random seed
+	Rcpp::NumericVector beta(nsamp);
+	for (int i = 0; i < nsamp; i++) {
+		beta[i] = mu + gsl_ran_gaussian(s, sigma); // Random draw
+	}
+	return beta;
+}
+```
+\vspace{0.3cm}
+
+## R code
+```{r r-my_rnorm, fig.show="asis", out.width="70%"}
+library(Rcpp)
+library(RcppGSL)
+beta <- my_rnorm(100, 5, 2)
+par(cex=2)
+hist(beta)
+```
+
+# RcppArmadillo example
+
+## C++ code
+```{Rcpp RcppArma-example}
+#include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::export]]
+arma::mat arma_scale(const arma::mat& X) {
+    int n = X.n_rows, k = X.n_cols;
+    arma::rowvec col_means = arma::mean(X,0); // means 
+    arma::rowvec col_sd  = arma::stddev(X,0); // standard deviations
+    arma::mat X_scaled(n,k);
+    for (int  p= 0; p < k; p++) {
+    X_scaled.col(p) = (X.col(p)-col_means(p))/col_sd(p);
+    }
+    return X_scaled;
+}
+```
+
+## R code
+```{r r-RcppArma-example}
+library(Rcpp)
+library(RcppArmadillo)
+
+# Center and reduce a matrix 
+X <- matrix(rnorm(50),ncol=5)
+X_scaled <- arma_scale(X)
+colMeans(X_scaled)
+var(X_scaled)
+```
+
+
+# Distance computation 
+
+## C++ function 
+(in file `Code/arma_distmat.cpp`)
+```{Rcpp arma_distmat}
+#include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
+using namespace Rcpp;
+using namespace arma;
+
+// [[Rcpp::export]]
+arma::mat arma_distmat(const arma::mat& x) { 
+  int np = x.n_rows;
+  arma::mat distmat; distmat.zeros(np, np);
+  for (int i = 0; i < np; i++) {
+    arma::vec p0 = x.row(i).t();
+    for (int j = i + 1; j < np; j++) {
+      arma::vec p1 = x.row(j).t();
+      arma::vec diff = p0 - p1;
+      double squared_diff = as_scalar(diff.t() * diff);
+      distmat(j, i) = distmat(i, j) = sqrt(squared_diff);
+    }
+  }
+  return distmat;
+}
+```
+
+## R function
+```{r R_distmat}
+R_distmat <- function(X){
+  np <- nrow(X)
+  distmat <- matrix(0,nrow=np,ncol=np)
+  for (i in 1:(np-1)) {
+    p0 <- X[i,]
+    for (j in (i+1):np){
+    p1 <- X[j,]
+    diff <- p0-p1
+    squared_diff <- t(diff)%*% diff
+    distmat[j,i] <- distmat[i,j] <- sqrt(squared_diff)
+    }
+  }
+ return(distmat)
+}
+```
+
+## Comparison of compilation times
+```{r dist-benchmark}
+library(rdist)
+# Data simulation 
+coords <- matrix(runif(2000,0,100),ncol=2)
+# Call of C++ function
+Rcpp::sourceCpp("Code/arma_distmat.cpp")
+# Benchmark
+library(rbenchmark)
+Benchmark <- benchmark(
+  "arma_distmat" = {arma_distmat(coords)},
+  "cdist" = {cdist(coords,coords)},
+  "R_distmat" = {R_distmat(coords)},
+  replications=30,
+  columns = c("test", "elapsed", "relative"))
+```
+
+```{r dist-benchmark-results, echo=F}
+library(dplyr)
+knitr::kable(Benchmark,digits=1, booktabs=TRUE) %>%
+		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
+		                          full_width=FALSE,position = "left")
+```
+
+## Representation of results 
+\vspace{0.5cm}
+
+**1000 points dispersed all over the space : **
+\vspace{0.2cm}
+```{r points-representation, echo=F,  fig.show="asis", out.width="60%",out.height="60%", fig.align="left"}
+# Spatial representation of points  
+coords <- matrix(runif(2000,0,100),ncol=2)
+plot(coords[,1],coords[,2],pch=4,xlab="x", ylab="y", main="Spatial repartition of points", col="forestgreen")
+```
+\vspace{0.2cm}
+**Coordinates of 5 points**
+\vspace{0.1cm}
+```{r coordinates, echo=F}
+knitr::kable(coords[1:5,],col.names = c(" x "," y "), digits=1, booktabs=TRUE) %>%
+		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
+		                          full_width=FALSE,position = "left")
+```
+\vspace{0.2cm}
+**Distance matrix for this points : **
+\vspace{0.1cm}
+```{r distance-matrix, echo=F}
+distmat <- arma_distmat(coords)
+knitr::kable(distmat[1:5,1:5], digits=1, booktabs=TRUE) %>%
+		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
+		                          full_width=FALSE,position = "left")
+```
+
+# Simple linear regression 
+
+## C++ function
+```{Rcpp fastLm}
+#include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::export]]
+Rcpp::List arma_fastLm(const arma::mat& X, const arma::colvec& y) {
+    int n = X.n_rows, k = X.n_cols;
+        
+    arma::colvec coef = arma::inv(X.t()*X)*X.t()*y;    // fit model y ~ X
+    arma::colvec res  = y - X*coef;           // residuals
+    // std.errors of coefficients
+    double s2 = arma::sum(res.t()*res);
+    arma::colvec std_err = arma::sqrt(s2*arma::diagvec(arma::inv(X.t()*X)));
+    return Rcpp::List::create(Rcpp::Named("coefficients") = coef,
+                        Rcpp::Named("stderr") = std_err,
+                        Rcpp::Named("residuals")  = res,
+                        Rcpp::Named("df.residual")  = n - k);
+}
+```
+
+## R function
+```{r r-fastLm}
+R_fastLm <- function(X, y) {
+n <- nrow(X)
+k <- ncol(X)
+
+# fit model y ~ X       
+coef <-solve(t(X) %*% X) %*% t(X) %*% y
+# residuals
+res <- y - X %*% coef
+# std.errors of coefficients
+s2 = sum(t(res) %*% res)/(n - k);
+std_err = sqrt(s2 %*% diag(solve(t(X)%*%X)))
+return(list("coefficients" = coef,
+            "stderr" = std_err,
+            "residuals" = res,
+            "df.residual" = n - k))
+}
+```
+
+## Comparison of compilation times
+```{r lin-benchmark}
+library(datasets)
+# Trees data-set
+y <- log(trees$Volume)
+X <- cbind(1, log(trees$Girth), log(trees$Height))
+# Call C++ function
+Rcpp::sourceCpp("Code/arma_fastLm.cpp")
+# Benchmark
+library(rbenchmark)
+Benchmark <- benchmark(
+  "arma_fastLm" = {arma_fastLm(X,y)},
+  "R_fastLm" = {R_fastLm(X,y)},
+  replications=100,
+  columns = c("test", "elapsed", "relative"))
+```
+
+```{r lin-benchmark-results, echo=F}
+knitr::kable(Benchmark,digits=4, booktabs=TRUE) %>%
+		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
+		                          full_width=FALSE,position = "left")
+```
+
+## Representation of results 
+```{r lin-results,fig.show="asis", out.width="50%",out.height="50%"}
+# Trees data-set
+y <- log(trees$Volume)
+X <- cbind(1, log(trees$Girth), log(trees$Height))
+# fit model y ~ X
+arma_mod <- arma_fastLm(X,y)
+R_mod <- R_fastLm(X,y)
+# Comparison of residuals obtained with R and C++ functions
+plot(arma_mod$residuals,R_mod$residuals,xlab="residuals with C++",ylab="residuals with R",pch=4, main="Residuals")
+abline(a=0,b=1, col="red")
+# Representation of the linear regression
+plot(X%*%arma_mod$coefficients,y,xlab="Xbeta",ylab="y",pch=4, main ="Linear regression")
+abline(a=0,b=1, col="red")
+```
+
+# Loglikelihood computation 
+
+## Mathematical definition
+
+Implement a function in C++ to select in a matrix the lines identified by a vector of integer and return the corresponding matrix.  
+
+## C++ function 
+```{Rcpp arma_logL}
+#include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::export]]
+double arma_logL(arma::mat X, arma::vec y, arma::vec beta) {
+  int n = y.n_elem;
+  int p = X.n_cols;
+  double logL = 0;
+  for(int i = 0; i < n; i++) {
+      double Xbeta_part = 0;
+    for(int j = 0; j < p; j++) {
+      Xbeta_part += X(i,j)*beta(j);
+    }
+    logL += R::dnorm(y[i], Xbeta_part, 1, 1);
+  }
+  return logL;
+}
+```
+
+## R function 
+```{r R_logL}
+R_logL <- function(X,y,beta) {
+  n <- length(y)
+  p <- ncol(X)
+  logL <- 0
+  for (i in 1:n) {
+    Xbeta_part <- 0
+    for(j in 1:p) {
+      Xbeta_part <- Xbeta_part + X[i,j]*beta[j]
+    }
+    logL <- logL + dnorm(x=y[i], mean=Xbeta_part, sd=1, log=T)
+  }
+  return(logL)
+}
+```
+
+## Comparison of compilation times
+```{r logL-benchmark}
+# Trees data-set
+y <- log(trees$Volume)
+X <- cbind(1, log(trees$Girth), log(trees$Height))
+# fit model y ~ X
+arma_mod <- arma_fastLm(X,y)
+R_mod <- R_fastLm(X,y)
+# Call C++ function
+Rcpp::sourceCpp("Code/arma_logL.cpp")
+# Benchmark
+Benchmark <- benchmark(
+  "arma_logL" = {arma_logL(X,y,arma_mod$coefficients)},
+  "R_logL" = {R_logL(X,y,R_mod$coefficients)},
+  replications=100,
+  columns = c("test", "elapsed", "relative"))
+```
+
+```{r logL-benchmark-results, echo=F}
+library(dplyr)
+knitr::kable(Benchmark,digits=3, booktabs=TRUE) %>%
+		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
+		                          full_width=FALSE, position = "left")
+```
+
+## Representation of results 
+
+```{r logL-results, echo=F}
+# Trees data-set
+y <- log(trees$Volume)
+# fit models y ~ X
+## model 1
+X1 <- cbind(1, log(trees$Girth))
+arma_mod1 <- arma_fastLm(X1,y)
+R_mod1 <- R_fastLm(X1,y)
+arma_logL1 <- arma_logL(X1,y,arma_mod$coefficients)
+R_logL1 <- R_logL(X1,y,R_mod$coefficients)
+## model 2
+X2 <- cbind(1, log(trees$Height))
+arma_mod2 <- arma_fastLm(X2,y)
+R_mod2 <- R_fastLm(X2,y)
+arma_logL2 <- arma_logL(X2,y,arma_mod$coefficients)
+R_logL2 <- R_logL(X2,y,R_mod$coefficients)
+## model 3
+X3 <- cbind(1, log(trees$Girth), log(trees$Height))
+arma_mod3 <- arma_fastLm(X3,y)
+R_mod3 <- R_fastLm(X3,y)
+arma_logL3 <- arma_logL(X3,y,arma_mod$coefficients)
+R_logL3 <- R_logL(X3,y,R_mod$coefficients)
+logL <- data.frame(arma_logL=c(arma_logL1,arma_logL2,arma_logL3), R_logL=c(R_logL1,R_logL2,R_logL3))
+rownames(logL) <- c("model 1","model 2","model 3")
+knitr::kable(logL,digits=3, booktabs=TRUE, row.names = T) %>%
+		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
+		                          full_width=FALSE,position = "left")
+```
+

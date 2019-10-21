@@ -1,8 +1,0 @@
-base
-knitr
-kableExtra
-Rcpp
-RcppGSL
-RcppArmadillo
-rdist
-rbenchmark

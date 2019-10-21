@@ -98,6 +98,10 @@ var(X_scaled)
 
 # Distance computation 
 
+## Mathematical definition
+
+The Euclidean distance between two points whose coordinates are $A=(x_A, y_A)$ and $B=(x_B,y_B)$ is given by $$\sqrt{(x_B-x_A)^2 + (y_B-y_A)^2}.$$
+
 ## C++ function 
 (in file `Code/arma_distmat.cpp`)
 ```{Rcpp arma_distmat}
@@ -195,6 +199,34 @@ knitr::kable(distmat[1:5,1:5], digits=1, booktabs=TRUE) %>%
 
 # Simple linear regression 
 
+## Mathematical definition 
+\vspace{0.2cm} 
+We have observations of a response variable available for $n$ individuals $Y=(y_i)_{i=1,\ldots,n}$   
+
+and $p$ explanatory variables $(X_1,\ldots,X_p)$ such as   $X_1=(X_{11},\ldots,X_{i1},\ldots,X_{n1})'$.  
+
+\vspace{1cm}
+We want to estimate $\beta=(\beta_0,\beta_1,\ldots,\beta_p)$ such as : 
+$$ y_i = \beta_0 + \beta_1X_{i1}+\ldots+\beta_pX_{ip}+\epsilon_i,$$
+where $\epsilon_i \sim \mathcal{N}(0,\sigma^2)$ for $i=1,\ldots,n$.  
+\vspace{0.4cm}
+
+This gives in matrix writing :  
+
+$$Y = X\beta + \epsilon $$ 
+where $X=(\mathbb{1}_n,X_1,\ldots,X_p)$ and $\epsilon=(\epsilon_i)_{i=1,\ldots,n}$.  
+\vspace{1cm}
+
+According to the Ordinary Least Squares (OLS) method, $\beta$ is estimated by :
+$$\widehat{\beta}=\left(X'X\right)^{-1}X'y.$$
+\vspace{0.2cm}
+We define the residuals  $$\widehat{\epsilon} = Y - X\widehat{\beta}=Y-\widehat{Y}.$$
+\vspace{0.2cm}
+Then residual variance is given by $$\widehat{\sigma^2}=\dfrac{\sum\limits_{i=1}^n \widehat{\epsilon_i}^2}{n-p}.$$  
+\vspace{0.2cm}
+Finally the variance–covariance matrix of coefficients is estimated by $$V_{\widehat{\beta}}=\widehat{\sigma^2}\left(X'X\right)^{-1}.$$
+\vspace{1cm}
+
 ## C++ function
 ```{Rcpp fastLm}
 #include <RcppArmadillo.h>
@@ -278,7 +310,16 @@ abline(a=0,b=1, col="red")
 
 ## Mathematical definition
 
-Implement a function in C++ to select in a matrix the lines identified by a vector of integer and return the corresponding matrix.  
+Implement a function in C++ using RcppArmadillo to compute the log-likelihood corresponding to each of the following models fitted on the trees dataset used previously :  
+
+- Model 1 : $y_i = \beta_0 + \beta_1G_i + \epsilon_i$
+
+- Model 2 : $y_i = \beta_0 + \beta_1H_i + \epsilon_i $
+
+- Model 3 : $y_i = \beta_0 + \beta_1G_i + \beta_2H_i + \epsilon_i$
+
+The likelihood corresponding to a model is given by : $l(\theta) = \sum$
+Then the log-likelihood is : $\prod$
 
 ## C++ function 
 ```{Rcpp arma_logL}

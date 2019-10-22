@@ -33,6 +33,15 @@ opts_chunk$set(echo=TRUE, cache=TRUE,
 options(knitr.kable.NA="-")
 ```
 
+
+# Packages to install 
+
+* Rcpp
+* RcppGSL
+* RcppArmadillo
+* rdist 
+* datasets
+
 # RcppGSL example
 
 ## C++ code
@@ -40,16 +49,23 @@ options(knitr.kable.NA="-")
 #include <Rcpp.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
+
 using namespace Rcpp;
+
 // [[Rcpp::depends(RcppGSL)]]
 // [[Rcpp::export]]
+
 Rcpp::NumericVector my_rnorm(int nsamp, double mu,
                              double sigma) {
+  
 	gsl_rng *s = gsl_rng_alloc(gsl_rng_mt19937); // Random seed
+  
 	Rcpp::NumericVector beta(nsamp);
+	
 	for (int i = 0; i < nsamp; i++) {
 		beta[i] = mu + gsl_ran_gaussian(s, sigma); // Random draw
 	}
+	
 	return beta;
 }
 ```
@@ -59,6 +75,7 @@ Rcpp::NumericVector my_rnorm(int nsamp, double mu,
 ```{r r-my_rnorm, fig.show="asis", out.width="70%"}
 library(Rcpp)
 library(RcppGSL)
+
 beta <- my_rnorm(100, 5, 2)
 par(cex=2)
 hist(beta)
@@ -69,16 +86,23 @@ hist(beta)
 ## C++ code
 ```{Rcpp RcppArma-example}
 #include <RcppArmadillo.h>
+
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::export]]
+
 arma::mat arma_scale(const arma::mat& X) {
+
     int n = X.n_rows, k = X.n_cols;
+  
     arma::rowvec col_means = arma::mean(X,0); // means 
     arma::rowvec col_sd  = arma::stddev(X,0); // standard deviations
+    
     arma::mat X_scaled(n,k);
+    
     for (int  p= 0; p < k; p++) {
     X_scaled.col(p) = (X.col(p)-col_means(p))/col_sd(p);
     }
+    
     return X_scaled;
 }
 ```
@@ -106,14 +130,18 @@ The Euclidean distance between two points whose coordinates are $A=(x_A, y_A)$ a
 (in file `Code/arma_distmat.cpp`)
 ```{Rcpp arma_distmat}
 #include <RcppArmadillo.h>
-// [[Rcpp::depends(RcppArmadillo)]]
+
 using namespace Rcpp;
 using namespace arma;
 
+// [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::export]]
+
 arma::mat arma_distmat(const arma::mat& x) { 
+  
   int np = x.n_rows;
   arma::mat distmat; distmat.zeros(np, np);
+  
   for (int i = 0; i < np; i++) {
     arma::vec p0 = x.row(i).t();
     for (int j = i + 1; j < np; j++) {
@@ -123,15 +151,19 @@ arma::mat arma_distmat(const arma::mat& x) {
       distmat(j, i) = distmat(i, j) = sqrt(squared_diff);
     }
   }
+  
   return distmat;
 }
 ```
 
 ## R function
 ```{r R_distmat}
+
 R_distmat <- function(X){
+  
   np <- nrow(X)
   distmat <- matrix(0,nrow=np,ncol=np)
+  
   for (i in 1:(np-1)) {
     p0 <- X[i,]
     for (j in (i+1):np){
@@ -141,17 +173,38 @@ R_distmat <- function(X){
     distmat[j,i] <- distmat[i,j] <- sqrt(squared_diff)
     }
   }
+  
  return(distmat)
 }
+```
+
+## Data simulation 
+** Simulation of 1000 points dispersed all over the space : **
+\vspace{0.2cm}
+```{r points-representation,  fig.show="asis", out.width="60%",out.height="60%", fig.align="left"}
+# Data simulation 
+coords <- matrix(runif(2000,0,100),ncol=2)
+
+# Spatial representation of points  
+plot(coords[,1],coords[,2],pch=4,xlab="x", ylab="y", main="Spatial repartition of points", col="forestgreen")
+```
+\vspace{0.2cm}
+
+**Coordinates of 5 points**
+\vspace{0.1cm}
+```{r coordinates, echo=F}
+knitr::kable(coords[1:5,],col.names = c(" x "," y "), digits=1, booktabs=TRUE) %>%
+		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
+		                          full_width=FALSE,position = "left")
 ```
 
 ## Comparison of compilation times
 ```{r dist-benchmark}
 library(rdist)
-# Data simulation 
-coords <- matrix(runif(2000,0,100),ncol=2)
+
 # Call of C++ function
 Rcpp::sourceCpp("Code/arma_distmat.cpp")
+
 # Benchmark
 library(rbenchmark)
 Benchmark <- benchmark(
@@ -170,24 +223,6 @@ knitr::kable(Benchmark,digits=1, booktabs=TRUE) %>%
 ```
 
 ## Representation of results 
-\vspace{0.5cm}
-
-**1000 points dispersed all over the space : **
-\vspace{0.2cm}
-```{r points-representation, echo=F,  fig.show="asis", out.width="60%",out.height="60%", fig.align="left"}
-# Spatial representation of points  
-coords <- matrix(runif(2000,0,100),ncol=2)
-plot(coords[,1],coords[,2],pch=4,xlab="x", ylab="y", main="Spatial repartition of points", col="forestgreen")
-```
-\vspace{0.2cm}
-**Coordinates of 5 points**
-\vspace{0.1cm}
-```{r coordinates, echo=F}
-knitr::kable(coords[1:5,],col.names = c(" x "," y "), digits=1, booktabs=TRUE) %>%
-		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
-		                          full_width=FALSE,position = "left")
-```
-\vspace{0.2cm}
 **Distance matrix for this points : **
 \vspace{0.1cm}
 ```{r distance-matrix, echo=F}
@@ -234,17 +269,21 @@ Finally the variance–covariance matrix of coefficients is estimated by $$V_{\w
 ## C++ function
 ```{Rcpp fastLm}
 #include <RcppArmadillo.h>
+
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::export]]
+
 Rcpp::List arma_fastLm(const arma::mat& X, const arma::colvec& y) {
     int n = X.n_rows;
     int p = X.n_cols;
         
-    arma::colvec coef = arma::inv(X.t()*X)*X.t()*y;    // fit model y ~ X
-    arma::colvec res  = y - X*coef;           // residuals
+    arma::colvec coef = arma::inv(X.t()*X)*X.t()*y; // fit model y ~ X
+    arma::colvec res  = y - X*coef; // residuals
+    
     // std.errors of coefficients
     double s2 = arma::sum(res.t()*res)/(n-p);
     arma::colvec std_err = arma::sqrt(s2*arma::diagvec(arma::inv(X.t()*X)));
+    
     return Rcpp::List::create(Rcpp::Named("coefficients") = coef,
                         Rcpp::Named("stderr") = std_err,
                         Rcpp::Named("residuals")  = res,
@@ -261,11 +300,14 @@ p <- ncol(X)
 
 # fit model y ~ X       
 coef <-solve(t(X) %*% X) %*% t(X) %*% y
+
 # residuals
 res <- y - X %*% coef
+
 # std.errors of coefficients
 s2 = sum(t(res) %*% res)/(n - p);
 std_err = sqrt(s2 %*% diag(solve(t(X)%*%X)))
+
 return(list("coefficients" = coef,
             "stderr" = std_err,
             "residuals" = res,
@@ -274,14 +316,27 @@ return(list("coefficients" = coef,
 }
 ```
 
-## Comparison of compilation times
-```{r lin-benchmark}
+## Linear regression on trees data set
+
+This data set provides measurements of the girth, height and volume of timber in 31 felled black cherry trees. 
+Volume will be considered as the variable to be explained and girths and heights as the explanatory variables. To have linear relationship between this variables, we will consider their log. 
+
+
+```{r lin-trees}
 library(datasets)
+
 # Trees data-set
 y <- log(trees$Volume)
 X <- cbind(1, log(trees$Girth), log(trees$Height))
+```
+
+## Comparison of compilation times
+
+```{r lin-benchmark}
+
 # Call C++ function
 Rcpp::sourceCpp("Code/arma_fastLm.cpp")
+
 # Benchmark
 library(rbenchmark)
 Benchmark <- benchmark(
@@ -299,21 +354,25 @@ knitr::kable(Benchmark,digits=4, booktabs=TRUE) %>%
 
 ## Representation of results 
 ```{r lin-results,fig.show="asis", out.width="50%",out.height="50%"}
+
 # Trees data-set
 y <- log(trees$Volume)
 X <- cbind(1, log(trees$Girth), log(trees$Height))
+
 # fit model y ~ X
 arma_mod <- arma_fastLm(X,y)
 R_mod <- R_fastLm(X,y)
+
 # Comparison of residuals obtained with R and C++ functions
 plot(arma_mod$residuals,R_mod$residuals,xlab="residuals with C++",ylab="residuals with R",pch=4, main="Residuals")
 abline(a=0,b=1, col="red")
+
 # Representation of the linear regression
 plot(X%*%arma_mod$coefficients,y,xlab="Xbeta",ylab="y",pch=4, main ="Linear regression")
 abline(a=0,b=1, col="red")
 ```
 
-# Loglikelihood computation 
+# Log-likelihood computation 
 
 ## Mathematical definition
 \vspace{0.2cm}
@@ -322,7 +381,7 @@ The maximum of this function, if it exists, correspond to the combination of mod
 \vspace{0.2cm}
 The likelihood corresponding to the previous simple linear model is given by :
 $$\begin{aligned}
-L(\beta,\sigma^2) &= \mathbb{P}(y_i \ | \ \sigma, \beta) \\
+L(\beta,\sigma^2) &= \mathbb{P}(y_i \ | \ \beta, \sigma^2) \\
 &=\prod \limits_{i=1}^n \frac{1}{\sigma \sqrt{2\pi}}\exp{\left(-\frac{1}{2\sigma^2}(y_i-\beta_0-X_{i1}\beta_1-\ldots-X_{ip}\beta_p)^2 \right)}
 \end{aligned}$$
 
@@ -333,22 +392,28 @@ l(\beta,\sigma^2) &= \log{\left(L(\beta,\sigma^2)\right)} \\
 &= -n\log(\sigma)-n\frac{\log(2\pi)}{2} -\frac{1}{2\sigma^2} \sum \limits_{i=1}^n (y_i-\beta_0-X_{i1}\beta_1-\ldots-X_{ip}\beta_p)^2
 \end{aligned}$$
 
-Implement a function in C++ using RcppArmadillo to compute the log-likelihood corresponding to each of the following models fitted on the trees dataset used previously :  
+## Exercise 
 
-- Model 1 : $y_i = \beta_0 + \beta_1G_i + \epsilon_i$
+1. Implement a function in C++ using RcppArmadillo to compute the log-likelihood corresponding to the previous simple linear model taking as argument the explicative variables $X$, the response variable $Y$, the estimated regression coefficients $\widehat{\beta}$ and the calculated residual variance $\widehat{\sigma^2}$.
 
-- Model 2 : $y_i = \beta_0 + \beta_1H_i + \epsilon_i $
+2.  Use trees data set to fit three distincts linear models with the log of the Volume as response variable and different choices of explanatory variables.  
 
-- Model 3 : $y_i = \beta_0 + \beta_1G_i + \beta_2H_i + \epsilon_i$
+3. Compute the log-likelihood of each model.
+
+4. Deduce from the values obtained which model best reflects the data. 
 
 ## C++ function 
 ```{Rcpp arma_logL}
 #include <RcppArmadillo.h>
+
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::export]]
+
 double arma_logL(arma::mat X, arma::vec y, arma::vec beta, double sigma2) {
+  
   int n = y.n_elem;
   int p = X.n_cols;
+  
   double logL = 0;
   for(int i = 0; i < n; i++) {
       double Xbeta_part = 0;
@@ -357,6 +422,7 @@ double arma_logL(arma::mat X, arma::vec y, arma::vec beta, double sigma2) {
     }
     logL += R::dnorm(y[i], Xbeta_part, std::sqrt(sigma2), 1);
   }
+  
   return logL;
 }
 ```
@@ -364,6 +430,7 @@ double arma_logL(arma::mat X, arma::vec y, arma::vec beta, double sigma2) {
 ## R function 
 ```{r R_logL}
 R_logL <- function(X,y,beta,sigma2) {
+  
   n <- length(y)
   p <- ncol(X)
   
@@ -375,30 +442,53 @@ R_logL <- function(X,y,beta,sigma2) {
     }
     logL <- logL + dnorm(x=y[i], mean=Xbeta_part, sd=sqrt(sigma2), log=T)
   }
+  
   return(logL)
 }
 ```
 
-## Comparison of compilation times
-```{r logL-benchmark}
+## Linear regressions on trees data set
+
+```{r 3lin-trees}
 # Trees data-set
 y <- log(trees$Volume)
-X <- cbind(1, log(trees$Girth), log(trees$Height))
-# fit model y ~ X
-arma_mod <- arma_fastLm(X,y)
-R_mod <- R_fastLm(X,y)
+
+# fit models y ~ X
+## model 1 : log(Volume) ~ log(Girth)
+X1 <- cbind(1, log(trees$Girth))
+arma_mod1 <- arma_fastLm(X1,y)
+R_mod1 <- R_fastLm(X1,y)
+
+## model 2 : log(Volume) ~ log(Height)
+X2 <- cbind(1, log(trees$Height))
+arma_mod2 <- arma_fastLm(X2,y)
+R_mod2 <- R_fastLm(X2,y)
+
+## model 3 : log(Volume) ~ log(Height) + log(Girth)
+X3 <- cbind(1, log(trees$Girth), log(trees$Height))
+arma_mod3 <- arma_fastLm(X3,y)
+R_mod3 <- R_fastLm(X3,y)
+```
+
+
+## Comparison of compilation times
+
+We compare the rapidity of implemented functions in C++ and R to compute de log-likelihood corresponding of the model 3.
+\vspace{0.2cm}
+```{r logL-benchmark}
+
 # Call C++ function
 Rcpp::sourceCpp("Code/arma_logL.cpp")
+
 # Benchmark
 Benchmark <- benchmark(
-  "arma_logL" = {arma_logL(X,y,arma_mod$coefficients,arma_mod$sigma2)},
-  "R_logL" = {R_logL(X,y,R_mod$coefficients,R_mod$sigma2)},
+  "arma_logL" = {arma_logL(X3,y,arma_mod3$coefficients,arma_mod3$sigma2)},
+  "R_logL" = {R_logL(X3,y,R_mod3$coefficients,R_mod3$sigma2)},
   replications=100,
   columns = c("test", "elapsed", "relative"))
 ```
 
 ```{r logL-benchmark-results, echo=F}
-library(dplyr)
 knitr::kable(Benchmark,digits=3, booktabs=TRUE) %>%
 		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
 		                          full_width=FALSE, position = "left")
@@ -406,28 +496,21 @@ knitr::kable(Benchmark,digits=3, booktabs=TRUE) %>%
 
 ## Representation of results 
 
-```{r logL-results, echo=F}
-# Trees data-set
-y <- log(trees$Volume)
-# fit models y ~ X
-## model 1
-X1 <- cbind(1, log(trees$Girth))
-arma_mod1 <- arma_fastLm(X1,y)
-R_mod1 <- R_fastLm(X1,y)
-arma_logL1 <- arma_logL(X1,y,arma_mod1$coefficients,arma_mod1$sigma2)
+```{r logL-results}
+# log-likelihood computation
+## model 1 : log(Volume) ~ log(Girth)
 R_logL1 <- R_logL(X1,y,R_mod1$coefficients, R_mod1$sigma2)
-## model 2
-X2 <- cbind(1, log(trees$Height))
-arma_mod2 <- arma_fastLm(X2,y)
-R_mod2 <- R_fastLm(X2,y)
+arma_logL1 <- arma_logL(X1,y,arma_mod1$coefficients,arma_mod1$sigma2)
+
+## model 2 : log(Volume) ~ log(Height) 
 arma_logL2 <- arma_logL(X2,y,arma_mod2$coefficients,arma_mod2$sigma2)
 R_logL2 <- R_logL(X2,y,R_mod2$coefficients,R_mod2$sigma2)
-## model 3
-X3 <- cbind(1, log(trees$Girth), log(trees$Height))
-arma_mod3 <- arma_fastLm(X3,y)
-R_mod3 <- R_fastLm(X3,y)
-arma_logL3 <- arma_logL(X3,y,arma_mod3$coefficients,arma_mod3$sigma2)
+
+## model 3 : log(Volume) ~ log(Height) + log(Girth)
 R_logL3 <- R_logL(X3,y,R_mod3$coefficients,R_mod3$sigma2)
+arma_logL3 <- arma_logL(X3,y,arma_mod3$coefficients,arma_mod3$sigma2)
+
+# Results 
 logL <- data.frame(arma_logL=c(arma_logL1,arma_logL2,arma_logL3), R_logL=c(R_logL1,R_logL2,R_logL3))
 rownames(logL) <- c("model 1","model 2","model 3")
 knitr::kable(logL,digits=3, booktabs=TRUE, row.names = T) %>%

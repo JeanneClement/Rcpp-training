@@ -17,7 +17,7 @@ urlcolor: Maroon
 ```{r options, include=FALSE}
 library(knitr)
 library(kableExtra)
-opts_chunk$set(echo=TRUE, cache=TRUE,
+opts_chunk$set(echo=TRUE, cache=F,
                #results="hide", 
                warning=FALSE,
                message=FALSE, highlight=TRUE,

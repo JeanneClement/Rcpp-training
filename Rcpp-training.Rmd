@@ -21,9 +21,10 @@ urlcolor: Maroon
 ```{r options, include=FALSE}
 library(knitr)
 library(kableExtra)
+library(bookdown)
 library(pkgdown)
 library(dplyr)
-opts_chunk$set(echo=TRUE, cache=TRUE,
+opts_chunk$set(echo=TRUE, cache=F,
                #results="hide", 
                warning=FALSE,
                message=FALSE, highlight=TRUE,
@@ -37,10 +38,12 @@ options(knitr.kable.NA="-")
 # Packages to install 
 
 * Rcpp
-* RcppGSL
+* RcppGSL require GSL installed (~$ sudo apt-get install libgsl-dev with Ubuntu)
 * RcppArmadillo
-* rdist 
 * datasets
+* rbenchmark
+* rdist
+
 
 # RcppGSL example
 

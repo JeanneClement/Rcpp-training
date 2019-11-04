@@ -145,13 +145,28 @@ addition(2, 2)
 
 ### GSL random number distributions
 
+\bcols
+\bcol{0.1\textwidth}
+\includegraphics[height=1.5cm]{figs/logo_GNU.png}
+\ecol
+\bcol{0.9\textwidth}
+
 - GSL v2.6 includes **38 random number distributions** (see [GNU GSL](https://www.gnu.org/software/gsl/doc/html/randist.html))
-
-- It's easy to implement additional random number distributions from the GSL base distributions (e.g. truncated normal distribution)
-
+\vspace{0.1cm}
 - For comparison, R API includes "only" 24 random number distributions (see [Writing R Extensions](https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Distribution-functions))
-
+\vspace{0.1cm}
+\pause
+- It's easy to implement additional random number distributions from the GSL base distributions (e.g. truncated normal or inverse gamma distribution)
+\vspace{0.1cm}
 - Random draws are faster with GSL than with R (eg. `gsl_ran_gamma()` vs. `R::rgamma()`)
+\vspace{0.1cm}
+\pause
+- Examples of functions to generate random sample : `gsl_ran_multivariate_gaussian()`, `gsl_ran_wishart()`, `gsl_ran_dirichlet()`
+\vspace{0.1cm}
+- Probability density function (`_pdf`), upper or lower cumulative distribution functions (`_Q` or `_P`) and quantile functions (`_Qinv` or `_Pinv`) are also available for each distribution. 
+
+\ecol
+\ecols
 
 ## RcppArmadillo for high-performance linear algebra
 

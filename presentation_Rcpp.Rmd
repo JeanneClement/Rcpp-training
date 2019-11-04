@@ -74,7 +74,7 @@ addition(2, 2)
 
 ### Useful Rcpp features 
 
-**`Rcpp::export` preceding the C++ function definition**
+**`// [[Rcpp::export]]` preceding the C++ function definition**
 
 - Indicate that it should be made available as an R function
 

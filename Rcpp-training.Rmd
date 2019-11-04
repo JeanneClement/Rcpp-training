@@ -52,12 +52,11 @@ options(knitr.kable.NA="-")
 #include <Rcpp.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
+// [[Rcpp::depends(RcppGSL)]]
 
 using namespace Rcpp;
 
-// [[Rcpp::depends(RcppGSL)]]
 // [[Rcpp::export]]
-
 Rcpp::NumericVector my_rnorm(int nsamp, double mu,
                              double sigma) {
   

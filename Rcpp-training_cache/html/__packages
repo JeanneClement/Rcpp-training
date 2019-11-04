@@ -1,6 +1,7 @@
 base
 knitr
 kableExtra
+bookdown
 pkgdown
 dplyr
 Rcpp

@@ -24,7 +24,7 @@ library(kableExtra)
 library(bookdown)
 library(pkgdown)
 library(dplyr)
-opts_chunk$set(echo=TRUE, cache=F,
+opts_chunk$set(echo=TRUE, cache=T,
                #results="hide", 
                warning=FALSE,
                message=FALSE, highlight=TRUE,
@@ -41,12 +41,17 @@ options(knitr.kable.NA="-")
 * RcppGSL require GSL installed (~$ sudo apt-get install libgsl-dev with Ubuntu)
 * RcppArmadillo
 * datasets
-* rbenchmark
 * rdist
-
+* rbenchmark
+* rmarkdown
+* knitr
+* kableExtra
+* dplyr
 
 # RcppGSL example
 
+Function to generate a random sample from gaussian distribution : 
+\vspace{0.2cm}
 ## C++ code
 ```{Rcpp RcppGSL-my_rnorm}
 #include <Rcpp.h>
@@ -58,17 +63,24 @@ using namespace Rcpp;
 
 // [[Rcpp::export]]
 Rcpp::NumericVector my_rnorm(int nsamp, double mu,
-                             double sigma) {
+                             double sigma, int seed) {
   
-	gsl_rng *s = gsl_rng_alloc(gsl_rng_mt19937); // Random seed
+  // Initialize random seed for random number generator 
+  gsl_rng *s = gsl_rng_alloc(gsl_rng_mt19937);
+  gsl_rng_set(s, seed);
   
-	Rcpp::NumericVector beta(nsamp);
-	
-	for (int i = 0; i < nsamp; i++) {
-		beta[i] = mu + gsl_ran_gaussian(s, sigma); // Random draw
-	}
-	
-	return beta;
+  // Initialize the vector to store results
+  Rcpp::NumericVector beta(nsamp);
+  
+  // Generate a sample of nsamp values from gaussian distribution 
+  for (int i = 0; i < nsamp; i++) {
+    beta[i] = mu + gsl_ran_gaussian(s, sigma); // Random draw
+  }
+  
+  // Free memory
+  gsl_rng_free(s);
+  
+  return beta;
 }
 ```
 \vspace{0.3cm}
@@ -78,34 +90,39 @@ Rcpp::NumericVector my_rnorm(int nsamp, double mu,
 library(Rcpp)
 library(RcppGSL)
 
-beta <- my_rnorm(100, 5, 2)
-par(cex=2)
+beta <- my_rnorm(nsamp=100, mu=5, sigma=2, seed=123)
 hist(beta)
 ```
 
 # RcppArmadillo example
 
+Function to center and scale the columns of a numeric matrix :
+\vspace{0.2cm}
 ## C++ code
 ```{Rcpp RcppArma-example}
 #include <RcppArmadillo.h>
-
 // [[Rcpp::depends(RcppArmadillo)]]
+
 // [[Rcpp::export]]
-
-arma::mat arma_scale(const arma::mat& X) {
-
-    int n = X.n_rows, k = X.n_cols;
+arma::mat arma_scale(const arma::mat X) {
   
-    arma::rowvec col_means = arma::mean(X,0); // means 
-    arma::rowvec col_sd  = arma::stddev(X,0); // standard deviations
-    
-    arma::mat X_scaled(n,k);
-    
-    for (int  p= 0; p < k; p++) {
+  // Define dimensions of the matrix 
+  int n = X.n_rows, k = X.n_cols;
+  
+  // Initialize the matrix to store results
+  arma::mat X_scaled(n,k);
+  
+  // means 
+  arma::rowvec col_means = arma::mean(X,0); 
+  // standard deviations
+  arma::rowvec col_sd  = arma::stddev(X,0); 
+  
+  // Scale and center each column of the matrix 
+  for (int  p= 0; p < k; p++) {
     X_scaled.col(p) = (X.col(p)-col_means(p))/col_sd(p);
-    }
-    
-    return X_scaled;
+  }
+  
+  return X_scaled;
 }
 ```
 
@@ -117,6 +134,7 @@ library(RcppArmadillo)
 # Center and reduce a matrix 
 X <- matrix(rnorm(50),ncol=5)
 X_scaled <- arma_scale(X)
+## Check if the resulting matrix is scaled and centered
 colMeans(X_scaled)
 var(X_scaled)
 ```
@@ -132,28 +150,35 @@ The Euclidean distance between two points whose coordinates are $A=(x_A, y_A)$ a
 (in file `Code/arma_distmat.cpp`)
 ```{Rcpp arma_distmat}
 #include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
 
 using namespace Rcpp;
 using namespace arma;
 
-// [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::export]]
 
-arma::mat arma_distmat(const arma::mat& x) { 
+
+arma::mat arma_distmat(arma::mat X) { 
   
-  int np = x.n_rows;
+  // Number of points
+  int np = X.n_rows;
+  
+  // Initialize with zeros the matrix to store results
   arma::mat distmat; distmat.zeros(np, np);
   
+  // Loop on all points 
   for (int i = 0; i < np; i++) {
-    arma::vec p0 = x.row(i).t();
+    arma::vec p0 = X.row(i).t(); // fix a point 
+    
+    // Loop to calculate the distances between this point and the next ones  
     for (int j = i + 1; j < np; j++) {
-      arma::vec p1 = x.row(j).t();
-      arma::vec diff = p0 - p1;
-      double squared_diff = as_scalar(diff.t() * diff);
+      arma::vec p1 = X.row(j).t();
+      arma::vec diff = p0 - p1; // (x0-x1,y0-y1)
+      double squared_diff = as_scalar(diff.t() * diff); // (x0-x1)² + (y0-y1)²
+      // Fill the distance matrix with the square root of precedent value
       distmat(j, i) = distmat(i, j) = sqrt(squared_diff);
     }
   }
-  
   return distmat;
 }
 ```
@@ -163,19 +188,26 @@ arma::mat arma_distmat(const arma::mat& x) {
 
 R_distmat <- function(X){
   
+  # Number of points
   np <- nrow(X)
+  
+  # Initialize with zeros the matrix to store results
   distmat <- matrix(0,nrow=np,ncol=np)
   
+  # Loop on points
   for (i in 1:(np-1)) {
-    p0 <- X[i,]
+    p0 <- X[i,] # fix a point 
+    
+    # Loop to calculate the distances between this point and the next ones  
     for (j in (i+1):np){
     p1 <- X[j,]
-    diff <- p0-p1
-    squared_diff <- t(diff)%*% diff
+    diff <- p0-p1 # (x0-x1,y0-y1)
+    squared_diff <- t(diff)%*% diff # (x0-x1)² + (y0-y1)²
+    
+    # Fill the distance matrix with the square root of precedent value
     distmat[j,i] <- distmat[i,j] <- sqrt(squared_diff)
     }
   }
-  
  return(distmat)
 }
 ```
@@ -403,120 +435,3 @@ l(\beta,\sigma^2) &= \log{\left(L(\beta,\sigma^2)\right)} \\
 3. Compute the log-likelihood of each model.
 
 4. Deduce from the values obtained which model best reflects the data. 
-
-## C++ function 
-```{Rcpp arma_logL}
-#include <RcppArmadillo.h>
-
-// [[Rcpp::depends(RcppArmadillo)]]
-// [[Rcpp::export]]
-
-double arma_logL(arma::mat X, arma::vec y, arma::vec beta, double sigma2) {
-  
-  int n = y.n_elem;
-  int p = X.n_cols;
-  
-  double logL = 0;
-  for(int i = 0; i < n; i++) {
-      double Xbeta_part = 0;
-    for(int j = 0; j < p; j++) {
-      Xbeta_part += X(i,j)*beta(j);
-    }
-    logL += R::dnorm(y[i], Xbeta_part, std::sqrt(sigma2), 1);
-  }
-  
-  return logL;
-}
-```
-
-## R function 
-```{r R_logL}
-R_logL <- function(X,y,beta,sigma2) {
-  
-  n <- length(y)
-  p <- ncol(X)
-  
-  logL <- 0
-  for (i in 1:n) {
-    Xbeta_part <- 0
-    for(j in 1:p) {
-      Xbeta_part <- Xbeta_part + X[i,j]*beta[j]
-    }
-    logL <- logL + dnorm(x=y[i], mean=Xbeta_part, sd=sqrt(sigma2), log=T)
-  }
-  
-  return(logL)
-}
-```
-
-## Linear regressions on trees data set
-
-```{r 3lin-trees}
-# Trees data-set
-y <- log(trees$Volume)
-
-# fit models y ~ X
-## model 1 : log(Volume) ~ log(Girth)
-X1 <- cbind(1, log(trees$Girth))
-arma_mod1 <- arma_fastLm(X1,y)
-R_mod1 <- R_fastLm(X1,y)
-
-## model 2 : log(Volume) ~ log(Height)
-X2 <- cbind(1, log(trees$Height))
-arma_mod2 <- arma_fastLm(X2,y)
-R_mod2 <- R_fastLm(X2,y)
-
-## model 3 : log(Volume) ~ log(Height) + log(Girth)
-X3 <- cbind(1, log(trees$Girth), log(trees$Height))
-arma_mod3 <- arma_fastLm(X3,y)
-R_mod3 <- R_fastLm(X3,y)
-```
-
-
-## Comparison of compilation times
-
-We compare the rapidity of implemented functions in C++ and R to compute de log-likelihood corresponding of the model 3.
-\vspace{0.2cm}
-```{r logL-benchmark}
-
-# Call C++ function
-Rcpp::sourceCpp("Code/arma_logL.cpp")
-
-# Benchmark
-Benchmark <- benchmark(
-  "arma_logL" = {arma_logL(X3,y,arma_mod3$coefficients,arma_mod3$sigma2)},
-  "R_logL" = {R_logL(X3,y,R_mod3$coefficients,R_mod3$sigma2)},
-  replications=100,
-  columns = c("test", "elapsed", "relative"))
-```
-
-```{r logL-benchmark-results, echo=F}
-knitr::kable(Benchmark,digits=3, booktabs=TRUE) %>%
-		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
-		                          full_width=FALSE, position = "left")
-```
-
-## Representation of results 
-
-```{r logL-results}
-# log-likelihood computation
-## model 1 : log(Volume) ~ log(Girth)
-R_logL1 <- R_logL(X1,y,R_mod1$coefficients, R_mod1$sigma2)
-arma_logL1 <- arma_logL(X1,y,arma_mod1$coefficients,arma_mod1$sigma2)
-
-## model 2 : log(Volume) ~ log(Height) 
-arma_logL2 <- arma_logL(X2,y,arma_mod2$coefficients,arma_mod2$sigma2)
-R_logL2 <- R_logL(X2,y,R_mod2$coefficients,R_mod2$sigma2)
-
-## model 3 : log(Volume) ~ log(Height) + log(Girth)
-R_logL3 <- R_logL(X3,y,R_mod3$coefficients,R_mod3$sigma2)
-arma_logL3 <- arma_logL(X3,y,arma_mod3$coefficients,arma_mod3$sigma2)
-
-# Results 
-logL <- data.frame(arma_logL=c(arma_logL1,arma_logL2,arma_logL3), R_logL=c(R_logL1,R_logL2,R_logL3))
-rownames(logL) <- c("model 1","model 2","model 3")
-knitr::kable(logL,digits=3, booktabs=TRUE, row.names = T) %>%
-		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),
-		                          full_width=FALSE,position = "left")
-```
-

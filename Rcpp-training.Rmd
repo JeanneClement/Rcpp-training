@@ -101,13 +101,7 @@ Function to center and scale the columns of a numeric matrix:
 // [[Rcpp::depends(RcppArmadillo)]]
 
 // [[Rcpp::export]]
-<<<<<<< HEAD
-arma::mat arma_scale(const arma::mat& X) {
-
-    int n = X.n_rows, k = X.n_cols;
-=======
 arma::mat arma_scale(const arma::mat X) {
->>>>>>> 17fba4f83e8f863f4c7f33f913c6c558ea427303
   
   // Define dimensions of the matrix 
   int n = X.n_rows, k = X.n_cols;
@@ -149,45 +143,6 @@ var(X_scaled)
 
 The Euclidean distance between two points whose coordinates are $A=(x_A, y_A)$ and $B=(x_B,y_B)$ is given by $$\sqrt{(x_B-x_A)^2 + (y_B-y_A)^2}.$$
 
-## C++ function 
-
-(in file `Code/arma_distmat.cpp`)
-
-```{Rcpp arma_distmat}
-#include <RcppArmadillo.h>
-// [[Rcpp::depends(RcppArmadillo)]]
-
-using namespace Rcpp;
-using namespace arma;
-
-// [[Rcpp::depends(RcppArmadillo)]]
-
-// [[Rcpp::export]]
-arma::mat arma_distmat(const arma::mat& x) { 
-
-  // Number of points
-  int np = X.n_rows;
-  
-  // Initialize with zeros the matrix to store results
-  arma::mat distmat; distmat.zeros(np, np);
-  
-  // Loop on all points 
-  for (int i = 0; i < np; i++) {
-    arma::vec p0 = X.row(i).t(); // fix a point 
-    
-    // Loop to calculate the distances between this point and the next ones  
-    for (int j = i + 1; j < np; j++) {
-      arma::vec p1 = X.row(j).t();
-      arma::vec diff = p0 - p1; // (x0-x1,y0-y1)
-      double squared_diff = as_scalar(diff.t() * diff); // (x0-x1)² + (y0-y1)²
-      // Fill the distance matrix with the square root of precedent value
-      distmat(j, i) = distmat(i, j) = sqrt(squared_diff);
-    }
-  }
-  return distmat;
-}
-```
-
 ## R function
 
 ```{r R_distmat}
@@ -215,6 +170,44 @@ R_distmat <- function(X) {
     }
   }
  return(distmat)
+}
+```
+
+## C++ function 
+
+(in file `Code/arma_distmat.cpp`)
+
+```{Rcpp arma_distmat}
+#include <RcppArmadillo.h>
+
+// [[Rcpp::depends(RcppArmadillo)]]
+
+using namespace Rcpp;
+using namespace arma;
+
+// [[Rcpp::export]]
+arma::mat arma_distmat(const arma::mat X) { 
+
+  // Number of points
+  int np = X.n_rows;
+  
+  // Initialize with zeros the matrix to store results
+  arma::mat distmat; distmat.zeros(np, np);
+  
+  // Loop on all points 
+  for (int i = 0; i < np; i++) {
+    arma::vec p0 = X.row(i).t(); // fix a point 
+    
+    // Loop to calculate the distances between this point and the next ones  
+    for (int j = i + 1; j < np; j++) {
+      arma::vec p1 = X.row(j).t();
+      arma::vec diff = p0 - p1; // (x0-x1,y0-y1)
+      double squared_diff = as_scalar(diff.t() * diff); // (x0-x1)² + (y0-y1)²
+      // Fill the distance matrix with the square root of precedent value
+      distmat(j, i) = distmat(i, j) = sqrt(squared_diff);
+    }
+  }
+  return distmat;
 }
 ```
 
@@ -264,7 +257,7 @@ knitr::kable(Benchmark,digits=1, booktabs=TRUE) %>%
 		                          full_width=FALSE,position = "left")
 ```
 
-## Representation of results 
+## Results 
 
 **Distance matrix for the 5 points**
 
@@ -381,7 +374,7 @@ library(rbenchmark)
 Benchmark <- benchmark(
   "arma_fastLm" = {arma_fastLm(X,y)},
   "R_fastLm" = {R_fastLm(X,y)},
-  replications=10,
+  replications=100,
   columns = c("test", "elapsed", "relative"))
 ```
 
@@ -438,8 +431,7 @@ l(\beta,\sigma^2) &= \log{\left(L(\beta,\sigma^2)\right)} \\
 
 1. Implement a function in C++ using RcppArmadillo to compute the log-likelihood corresponding to the previous simple linear model taking as argument the explicative variables $X$, the response variable $Y$, the estimated regression coefficients $\widehat{\beta}$ and the computed residual variance $\widehat{\sigma^2}$.
 
-2.  Use `trees` data set to fit three distincts linear models with the log of the Volume as response variable and different choices of explanatory variables.  
-
+2. Use `trees` data set to fit three distincts linear models with the log of the Volume as response variable and different choices of explanatory variables.  
 3. Compute the log-likelihood of each model.
 
 4. Deduce from the values obtained which model best reflects the data. 
@@ -455,7 +447,7 @@ R_logL <- function(X,y,beta,sigma2) {
   logL <- 0
   for (i in 1:n) {
     Xbeta_part <- 0
-    for(j in 1:p) {
+    for (j in 1:p) {
       Xbeta_part <- Xbeta_part + X[i,j]*beta[j]
     }
     logL <- logL + dnorm(x=y[i], mean=Xbeta_part, sd=sqrt(sigma2), log=T)
@@ -479,9 +471,9 @@ double arma_logL(arma::mat X, arma::vec y, arma::vec beta, double sigma2) {
   int p = X.n_cols;
   
   double logL = 0;
-  for(int i = 0; i < n; i++) {
+  for (int i = 0; i < n; i++) {
       double Xbeta_part = 0;
-    for(int j = 0; j < p; j++) {
+    for (int j = 0; j < p; j++) {
       Xbeta_part += X(i,j)*beta(j);
     }
     logL += R::dnorm(y[i], Xbeta_part, std::sqrt(sigma2), 1);
@@ -527,7 +519,7 @@ Rcpp::sourceCpp("Code/arma_logL.cpp")
 Benchmark <- benchmark(
   "arma_logL" = {arma_logL(X3,y,arma_mod3$coefficients,arma_mod3$sigma2)},
   "R_logL" = {R_logL(X3,y,R_mod3$coefficients,R_mod3$sigma2)},
-  replications=10,
+  replications=100,
   columns = c("test", "elapsed", "relative"))
 ```
 

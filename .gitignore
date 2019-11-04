@@ -3,6 +3,10 @@
 .Rapp.history
 Rplots.pdf
 
+# Output files
+presentation_Rcpp.pdf
+Rcpp-training.html
+
 # Session Data files
 .RData
 

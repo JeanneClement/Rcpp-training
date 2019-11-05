@@ -39,7 +39,6 @@ This tutorial is available at the following webpage: https://jeanneclement.githu
 All the source code is available on GitHub:
 https://github.com/JeanneClement/Rcpp-training/. 
 
-
 # Packages to install 
 
 * Rcpp
@@ -51,13 +50,13 @@ https://github.com/JeanneClement/Rcpp-training/.
 * rmarkdown
 * knitr
 * kableExtra
-* dplyr
+* magrittr
 
 # RcppGSL example
 
 Function to generate a random sample from gaussian distribution: 
 
-## C++ code
+## C++ and R code
 
 ```{Rcpp RcppGSL-my_rnorm}
 #include <Rcpp.h>
@@ -67,8 +66,8 @@ Function to generate a random sample from gaussian distribution:
 // [[Rcpp::depends(RcppGSL)]]
 
 // [[Rcpp::export]]
-Rcpp::NumericVector my_rnorm(int nsamp, double mu,
-                             double sigma, int seed) {
+Rcpp::NumericVector my_rnorm(const int& nsamp, const double& mu,
+                             const double& sigma, const int& seed) {
   
   // Initialize random seed for random number generator 
   gsl_rng *s = gsl_rng_alloc(gsl_rng_mt19937);
@@ -87,15 +86,24 @@ Rcpp::NumericVector my_rnorm(int nsamp, double mu,
   
   return beta;
 }
-```
 
-## R code
+// Possibility to add R code in .cpp file or Rcpp chunk
+// Rcpp::sourceCpp() compile the C++ function then execute R code 
 
-```{r r-my_rnorm, fig.show="asis", out.width="70%"}
+/*** R 
+
 library(Rcpp)
 library(RcppGSL)
 
+## Draw random sample 
 beta <- my_rnorm(nsamp=100, mu=5, sigma=2, seed=123)
+
+*/
+```
+
+## Representation of results 
+
+```{r r-my_rnorm, fig.show="asis", out.width="70%"}
 hist(beta)
 ```
 
@@ -110,7 +118,7 @@ Function to center and scale the columns of a numeric matrix:
 // [[Rcpp::depends(RcppArmadillo)]]
 
 // [[Rcpp::export]]
-arma::mat arma_scale(const arma::mat X) {
+arma::mat arma_scale(const arma::mat& X) {
   
   // Define dimensions of the matrix 
   int n = X.n_rows, k = X.n_cols;
@@ -184,8 +192,6 @@ R_distmat <- function(X) {
 
 ## C++ function 
 
-(in file `Code/arma_distmat.cpp`)
-
 ```{Rcpp arma_distmat}
 #include <RcppArmadillo.h>
 
@@ -195,7 +201,7 @@ using namespace Rcpp;
 using namespace arma;
 
 // [[Rcpp::export]]
-arma::mat arma_distmat(const arma::mat X) { 
+arma::mat arma_distmat(const arma::mat& X) { 
 
   // Number of points
   int np = X.n_rows;
@@ -245,9 +251,6 @@ knitr::kable(coords[1:5,],col.names = c(" x "," y "), digits=1, booktabs=TRUE) %
 
 ```{r dist-benchmark}
 library(rdist)
-
-# Call of C++ function
-Rcpp::sourceCpp("Code/arma_distmat.cpp")
 
 # Benchmark
 library(rbenchmark)
@@ -304,6 +307,31 @@ Then residual variance is given by $$\widehat{\sigma^2}=\dfrac{\sum\limits_{i=1}
 
 Finally the variance-covariance matrix of coefficients is estimated by $$V_{\widehat{\beta}}=\widehat{\sigma^2}\left(X'X\right)^{-1}.$$
 
+## R function
+
+```{r r-fastLm}
+R_fastLm <- function(X, y) {
+n <- nrow(X)
+p <- ncol(X)
+
+# fit model y ~ X       
+coef <- solve(t(X) %*% X) %*% t(X) %*% y
+
+# residuals
+res <- y - X %*% coef
+
+# std.errors of coefficients
+s2 <- sum(t(res) %*% res)/(n - p);
+std_err <- sqrt(s2 %*% diag(solve(t(X) %*% X)))
+
+return(list("coefficients" = coef,
+            "stderr" = std_err,
+            "residuals" = res,
+            "sigma2" = s2,
+            "df.residual" = n - p))
+}
+```
+
 ## C++ function
 
 ```{Rcpp fastLm}
@@ -331,31 +359,6 @@ Rcpp::List arma_fastLm(const arma::mat& X, const arma::colvec& y) {
 }
 ```
 
-## R function
-
-```{r r-fastLm}
-R_fastLm <- function(X, y) {
-n <- nrow(X)
-p <- ncol(X)
-
-# fit model y ~ X       
-coef <- solve(t(X) %*% X) %*% t(X) %*% y
-
-# residuals
-res <- y - X %*% coef
-
-# std.errors of coefficients
-s2 <- sum(t(res) %*% res)/(n - p);
-std_err <- sqrt(s2 %*% diag(solve(t(X) %*% X)))
-
-return(list("coefficients" = coef,
-            "stderr" = std_err,
-            "residuals" = res,
-            "sigma2" = s2,
-            "df.residual" = n - p))
-}
-```
-
 ## Linear regression on `trees` data set
 
 This data set provides measurements of the girth, height and volume of timber in 31 felled black cherry trees.
@@ -373,9 +376,6 @@ X <- cbind(1, log(trees$Girth), log(trees$Height))
 ## Comparison of compilation times
 
 ```{r lin-benchmark}
-
-# Call C++ function
-Rcpp::sourceCpp("Code/arma_fastLm.cpp")
 
 # Benchmark
 library(rbenchmark)
@@ -424,15 +424,15 @@ The likelihood function expresses the plausibilities of different parameter valu
 
 The likelihood corresponding to the previous simple linear model is given by :
 $$\begin{aligned}
-L(\beta,\sigma^2) &= \mathbb{P}(y_i \ | \ \beta, \sigma^2) \\
-&=\prod \limits_{i=1}^n \frac{1}{\sigma \sqrt{2\pi}}\exp{\left(-\frac{1}{2\sigma^2}(y_i-\beta_0-X_{i1}\beta_1-\ldots-X_{ip}\beta_p)^2 \right)}
+L(\beta,\sigma^2) &= \prod \limits_{i=1}^n p(y_i \ | \ \beta, \sigma^2) \\
+&=\prod \limits_{i=1}^n \frac{1}{\sigma \sqrt{2\pi}}\exp{\left(-\frac{1}{2\sigma^2}(y_i-\beta_0-x_{i1}\beta_1-\ldots-x_{ip}\beta_p)^2 \right)}
 \end{aligned}$$
 
 Then the log-likelihood is :
 $$\begin{aligned}
 l(\beta,\sigma^2) &= \log{\left(L(\beta,\sigma^2)\right)} \\
-&= \sum \limits_{i=1}^n \ \log \left(\frac{1}{\sigma \sqrt{2\pi}}\right) -\frac{1}{2\sigma^2}(y_i-\beta_0-X_{i1}\beta_1-\ldots-X_{ip}\beta_p)^2\\
-&= -n\log(\sigma)-n\frac{\log(2\pi)}{2} -\frac{1}{2\sigma^2} \sum \limits_{i=1}^n (y_i-\beta_0-X_{i1}\beta_1-\ldots-X_{ip}\beta_p)^2
+&= \sum \limits_{i=1}^n \ \log \left(\frac{1}{\sigma \sqrt{2\pi}}\right) -\frac{1}{2\sigma^2}(y_i-\beta_0-x_{i1}\beta_1-\ldots-x_{ip}\beta_p)^2\\
+&= -n\log(\sigma)-n\frac{\log(2\pi)}{2} -\frac{1}{2\sigma^2} \sum \limits_{i=1}^n (y_i-\beta_0-x_{i1}\beta_1-\ldots-x_{ip}\beta_p)^2
 \end{aligned}$$
 
 ## Exercise 
@@ -473,7 +473,7 @@ R_logL <- function(X,y,beta,sigma2) {
 // [[Rcpp::depends(RcppArmadillo)]]
 
 // [[Rcpp::export]]
-double arma_logL(arma::mat X, arma::vec y, arma::vec beta, double sigma2) {
+double arma_logL(const arma::mat& X, const arma::vec& y, const arma::vec& beta, const double& sigma2) {
   
   int n = y.n_elem;
   int p = X.n_cols;
@@ -520,9 +520,6 @@ We compare the speed of C++ and R functions used to compute de log-likelihood co
 
 ```{r logL-benchmark}
 
-# Call C++ function
-Rcpp::sourceCpp("Code/arma_logL.cpp")
-
 # Benchmark
 Benchmark <- benchmark(
   "arma_logL" = {arma_logL(X3,y,arma_mod3$coefficients,arma_mod3$sigma2)},
@@ -561,4 +558,4 @@ knitr::kable(logL,digits=3, booktabs=TRUE, row.names = T) %>%
 		                          full_width=FALSE,position = "left")
 ```
 
-Model 3 has the highest likelihood, it is the best model.  
+Model 3 has the highest likelihood, it is the the model that best matches the data. 

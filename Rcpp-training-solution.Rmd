@@ -473,7 +473,8 @@ R_logL <- function(X,y,beta,sigma2) {
 // [[Rcpp::depends(RcppArmadillo)]]
 
 // [[Rcpp::export]]
-double arma_logL(const arma::mat& X, const arma::vec& y, const arma::vec& beta, const double& sigma2) {
+double arma_logL(const arma::mat& X, const arma::vec& y,
+                 const arma::vec& beta, const double& sigma2) {
   
   int n = y.n_elem;
   int p = X.n_cols;
@@ -551,7 +552,8 @@ R_logL3 <- R_logL(X3,y,R_mod3$coefficients,R_mod3$sigma2)
 arma_logL3 <- arma_logL(X3,y,arma_mod3$coefficients,arma_mod3$sigma2)
 
 # Results 
-logL <- data.frame(arma_logL=c(arma_logL1,arma_logL2,arma_logL3), R_logL=c(R_logL1,R_logL2,R_logL3))
+logL <- data.frame(arma_logL=c(arma_logL1,arma_logL2,arma_logL3),
+                   R_logL=c(R_logL1,R_logL2,R_logL3))
 rownames(logL) <- c("model 1","model 2","model 3")
 knitr::kable(logL,digits=3, booktabs=TRUE, row.names = T) %>%
 		kableExtra::kable_styling(latex_options=c("HOLD_position","striped"),

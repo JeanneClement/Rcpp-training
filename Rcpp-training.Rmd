@@ -31,6 +31,8 @@ opts_chunk$set(echo=TRUE, cache=FALSE,
 options(knitr.kable.NA="-")
 ```
 
+This tutorial is available at the following webpage: https://jeanneclement.github.io/Rcpp-training/.
+
 # Packages to install 
 
 * Rcpp
@@ -272,15 +274,14 @@ knitr::kable(distmat[1:5,1:5], digits=1, booktabs=TRUE) %>%
 
 ## Mathematical definition 
 
-We have observations of a response variable available for $n$ individuals $Y=(y_i)_{i=1,\ldots,n}$   
+We have $n$ observations of a response variable $Y=(y_i)_{i=1,\ldots,n}$ and $p$ explanatory variables $(X_1,\ldots,X_p)$,  
+such as $X_1=(x_{11},\ldots,x_{i1},\ldots,x_{n1})'$.  
 
-and $p$ explanatory variables $(X_1,\ldots,X_p)$ such that   $X_1=(X_{11},\ldots,X_{i1},\ldots,X_{n1})'$.  
+We want to estimate coefficients of the linear regression $\beta=(\beta_0,\beta_1,\ldots,\beta_p)'$ such as : 
+$$ y_i = \beta_0 + \beta_1x_{i1}+\ldots+\beta_px_{ip}+\epsilon_i,$$
+where $\epsilon_i \sim \mathcal{N}(0,\sigma^2) \ iid$.  
 
-We want to estimate coefficients of the linear regression $\beta=(\beta_0,\beta_1,\ldots,\beta_p)$ such as: 
-$$ y_i = \beta_0 + \beta_1X_{i1}+\ldots+\beta_pX_{ip}+\epsilon_i,$$
-where $\epsilon_i \sim \mathcal{N}(0,\sigma^2)$ for $i=1,\ldots,n$.   
-
-Then $y_i \sim \mathcal{N}(\beta_0 + \beta_1X_{i1}+\ldots+\beta_pX_{ip}, \ \sigma^2)$.  
+Then $y_i \sim \mathcal{N}(\beta_0 + \beta_1x_{i1}+\ldots+\beta_px_{ip}, \ \sigma^2)$ $iid$ for $i=1,\ldots,n$.  
 
 This gives in matrix writing :  
 

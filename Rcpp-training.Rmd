@@ -18,7 +18,6 @@ urlcolor: Maroon
 library(knitr)
 library(kableExtra)
 library(bookdown)
-library(pkgdown)
 library(dplyr)
 
 opts_chunk$set(echo=TRUE, cache=FALSE,
@@ -50,7 +49,7 @@ https://github.com/JeanneClement/Rcpp-training/.
 * rmarkdown
 * knitr
 * kableExtra
-* dplyr
+* magrittr
 
 # RcppGSL example
 
@@ -78,7 +77,7 @@ Rcpp::NumericVector my_rnorm(const int& nsamp, const double& mu,
   
   // Generate a sample of nsamp values from gaussian distribution 
   for (int i = 0; i < nsamp; i++) {
-    beta[i] = mu + gsl_ran_gaussian(s, sigma); // Random draw
+    beta[i] = mu + sigma * gsl_ran_ugaussian(s); // Random draw
   }
   
   // Free memory
@@ -89,15 +88,12 @@ Rcpp::NumericVector my_rnorm(const int& nsamp, const double& mu,
 
 // Possibility to add R code in .cpp file or Rcpp chunk
 // Rcpp::sourceCpp() compile the C++ function then execute R code 
-
 /*** R 
-
 library(Rcpp)
 library(RcppGSL)
 
 ## Draw random sample 
 beta <- my_rnorm(nsamp=100, mu=5, sigma=2, seed=123)
-
 */
 ```
 

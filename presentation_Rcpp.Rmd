@@ -81,8 +81,8 @@ addition(2, 2)
 - Check if the function have return and entry types compatible with Rcpp i.e. convertible into R object according to the following correspondence tables of data types : 
 \pause
 \begin{center}
-\includegraphics[width=0.4\textwidth, height = 0.4\textheight]{figs/datatypes.png} \hspace{0.2cm}
-\includegraphics[width=0.3\textwidth, height = 0.3\textheight]{figs/datatypes2.png}
+\includegraphics[width=0.4\textwidth]{figs/datatypes.png} \hspace{0.2cm}
+\includegraphics[width=0.3\textwidth]{figs/datatypes2.png}
 \end{center}
 \vspace{0.5cm}
 

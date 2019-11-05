@@ -31,7 +31,13 @@ opts_chunk$set(echo=TRUE, cache=FALSE,
 options(knitr.kable.NA="-")
 ```
 
-This tutorial is available at the following webpage: https://jeanneclement.github.io/Rcpp-training/.
+A short presentation of Rcpp* packages is available at:
+https://jeanneclement.github.io/Rcpp-training/pres_Rcpp.pdf.  
+
+This tutorial is available at the following webpage: https://jeanneclement.github.io/Rcpp-training/.  
+
+All the source code is available on GitHub:
+https://github.com/JeanneClement/Rcpp-training/. 
 
 # Packages to install 
 

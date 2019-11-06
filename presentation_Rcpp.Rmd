@@ -53,25 +53,6 @@ options(knitr.kable.NA="-")
 
 - <http://www.rcpp.org/>
 
-### Simple Rcpp example
-
-**C++ code** (in file `Code/addition.cpp`)
-```{Rcpp Rcpp-addition, eval=FALSE}
-#include <Rcpp.h>
-using namespace Rcpp;
-
-// [[Rcpp::export]]
-int addition(int a, int b) {
-  return a + b;
-}
-```
-
-**R code**
-```{r addition-r}
-Rcpp::sourceCpp("Code/addition.cpp")
-addition(2, 2)
-```
-
 ### Useful Rcpp features 
 
 **`// [[Rcpp::export]]` preceding the C++ function definition**
@@ -107,6 +88,35 @@ addition(2, 2)
 - `Rcpp::sourceCpp()` therefore configures the build environment to correctly compile and link against the package specified
 
 - examples : `[[Rcpp::depends(RcppArmadillo)]]`,  `[[Rcpp::depends(RcppGSL)]]` ... 
+
+### Simple Rcpp example
+
+**C++ code** (in file `Code/addition.cpp`)
+```{Rcpp Rcpp-addition, eval=FALSE}
+#include <Rcpp.h>
+using namespace Rcpp;
+
+// [[Rcpp::export]]
+int addition(const int& a, const int& b) {
+  return a + b;
+}
+```
+
+**R code**
+```{r addition-r}
+Rcpp::sourceCpp("Code/addition.cpp")
+addition(2, 2)
+```
+
+### Reference in C++
+
+* A variable can be declared as reference by putting `&` in the declaration. 
+
+* The variable declared as reference becomes an alternative name for an existing variable, avoiding copy of large structures.
+
+* Useful to save copying of big objects when passed as arguments to functions, if we pass it without reference, a new copy of it is created which causes wastage of CPU time and memory. 
+
+* If a function receives a reference to a variable as argument, it can modify the value of the variable in memory, the `const` added in the argument declaration will stop it from being altered.
 
 ## RcppGSL for fast random draws
 
